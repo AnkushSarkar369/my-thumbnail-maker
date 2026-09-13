@@ -4,19 +4,23 @@ Typography is a visual component of the thumbnail, not merely a label.
 
 ## Core Principle
 
-Choose typography according to the role it needs to play in the concept.
+Choose typography according to the role it needs to play in the concept and composition.
 
 Do not use one font or typographic treatment for every thumbnail simply for consistency.
+
+Typography must serve the concept before it serves an aesthetic category such as "luxury," "editorial," "premium," or "sophisticated."
 
 ## Typographic Roles
 
 ### Bold Sans
 
-Use for short, immediate, high-impact words or statements.
+Use for short, immediate, high-impact words or statements. This is often the strongest choice when a single concept word is a major structural element.
 
 ### Elegant Serif
 
-Use for longer phrases, sophisticated concepts, or when typography should feel editorial or substantial.
+Use for longer phrases, sophisticated concepts, or when typography should genuinely feel editorial or substantial.
+
+Do not select a serif merely because the subject matter is intellectual, philosophical, or serious. The typography must fit the actual visual language of the thumbnail.
 
 ### Sans + Serif
 
@@ -50,7 +54,9 @@ Do not give every word equal visual weight.
 
 Place text according to the composition rather than following a fixed text position.
 
-Typography may interact with, overlap, frame, or contrast against imagery when doing so improves the concept and readability.
+Typography may interact with, overlap, frame, sit behind, or contrast against imagery when doing so improves the concept and readability.
+
+Typography can function as a structural layer of the thumbnail rather than as a caption placed on top of an image.
 
 ## Readability
 
@@ -91,6 +97,8 @@ Consistency should come from repeatedly using the same approved roles and typefa
 
 ## Final Rule
 
-Typography should strengthen the visual idea.
+Typography should strengthen the visual idea and its hierarchy.
+
+Do not choose typography because it makes the thumbnail look more expensive, elegant, cinematic, or sophisticated unless those qualities are actually part of the concept.
 
 If the thumbnail works better without text, do not add text merely because thumbnails are expected to contain it.
