@@ -1,12 +1,12 @@
 # Image
 
-Image treatment defines how the photographic or generated imagery should look and feel.
+Image treatment defines how the photographic or generated imagery should look and feel, and how depth, focus and physical characteristics reinforce composition.
 
 ## Core Principle
 
 Prioritize photographic credibility over generic "AI photorealism."
 
-The image should feel believable, intentional, and physically coherent.
+The image should feel believable, intentional, physically coherent, and compositionally layered.
 
 ## Reality
 
@@ -19,23 +19,46 @@ Choose the appropriate level of realism for the concept:
 
 Do not make an image more realistic than the concept requires.
 
+A conceptual or constructed image can remain visibly constructed while still having coherent materials, scale, depth and image treatment.
+
 ## Lighting
 
 Lighting is concept-dependent.
 
 Natural daylight, soft or hard directional light, high or low contrast, warm or cool light, mixed temperatures, silhouettes, and dramatic lighting are all valid.
 
-Lighting must remain coherent with the scene.
+Lighting must remain coherent with the scene and should reinforce the intended hierarchy when useful.
 
 Avoid lighting that exists only to make an image look "cinematic."
 
 ## Depth & Focus
 
-Use depth of field and focus to establish hierarchy.
+Use depth of field, focus, scale and spatial separation to establish hierarchy.
 
-Foreground, subject, and background should have believable spatial relationships.
+Foreground, subject, typography, and background should have believable spatial relationships when the composition implies physical depth.
+
+A dense background should not automatically have the same sharpness, contrast or visual authority as the primary subject.
 
 Blur should support composition rather than hide poor image generation.
+
+## Layer Separation
+
+When a thumbnail contains distinct visual layers, make their differences perceptible.
+
+Separation may come from:
+
+- focus
+- depth
+- luminance
+- contrast
+- colour
+- scale
+- edge clarity
+- lighting
+- texture
+- controlled negative space
+
+Do not allow every photographic element to have equal clarity, contrast and visual weight.
 
 ## Texture & Detail
 
@@ -49,6 +72,8 @@ Prefer:
 - appropriate image noise
 - believable lens characteristics
 - natural variation in surfaces
+
+Detail should follow hierarchy. Do not sharpen or richly detail peripheral elements merely because detail is available.
 
 Avoid uniformly smooth or overly polished imagery.
 
@@ -70,10 +95,11 @@ When generating imagery, prioritize:
 - natural object placement
 - physically plausible lighting
 - appropriate environmental detail
+- clear perceptual separation
 
 Do not maximize background complexity.
 
-A background should contain the amount of information the scene realistically requires.
+A background may contain substantial detail, but detail should be organized into meaningful groups or layers and should not flatten the hierarchy.
 
 ## Image Treatment
 
@@ -92,3 +118,5 @@ In particular, do not default to:
 ## Final Rule
 
 The image should look like a deliberate visual choice, not like an AI-generated image that has been heavily processed to appear impressive.
+
+Photographic detail, depth and effects are subordinate to the composition. Do not let image treatment erase the distinction between the thumbnail's major visual layers.
