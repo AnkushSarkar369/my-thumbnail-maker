@@ -9,15 +9,28 @@ It is not a fixed aesthetic or branding template. It defines the visual grammar 
 When creating a thumbnail:
 
 1. Understand the video's idea and intended visual message.
-2. Decide what the viewer must perceive first, second, and afterward.
-3. Determine the strongest visual representation of the idea before selecting individual objects or effects.
-4. Establish the major perceptual layers of the composition and keep them visually distinct.
-5. Apply only the relevant rules from this system.
-6. Do not force rules that make the concept weaker.
-7. Prefer intentional visual decisions over decoration.
-8. Preserve successful creative decisions during iteration.
+2. Preserve the actual meaning of that idea before making aesthetic decisions.
+3. Decide what the viewer must perceive first, second, and afterward.
+4. Determine the strongest visual representation of the idea before selecting individual objects or effects.
+5. Establish the major perceptual layers of the composition and keep them visually distinct.
+6. Apply only the relevant rules from this system.
+7. Do not force rules that make the concept weaker.
+8. Prefer intentional visual decisions over decoration.
+9. Preserve successful creative decisions during iteration.
 
 The system defines boundaries and decision rules. It does not dictate one universal composition, colour palette, font, lighting style, or image treatment.
+
+## Concept Fidelity
+
+The concept is the highest-level constraint.
+
+Do not substitute an adjacent idea because it is visually easier, more aesthetically familiar, or more conventional.
+
+Aesthetic associations are not conceptual equivalence. For example, pleasure does not automatically mean luxury, wealth, elegance, expensive products, resorts, or affluent lifestyle imagery. Hedonism does not automatically mean luxury. If the concept is about dopamine, temptation, compulsive gratification, bad habits, or immediate pleasure, the visual representation must preserve those meanings rather than replacing them with a more attractive adjacent aesthetic.
+
+When the concept contains specific creative anchors, preserve those anchors unless the user explicitly asks for reinterpretation. Do not replace them with generic symbols merely because they are safer, cleaner, more conventional, or easier to render.
+
+The system may determine how an idea should be represented, but it must not silently change what the idea is.
 
 ## Core Visual Grammar
 
@@ -29,7 +42,7 @@ Think in terms of:
 
 Do not jump directly from a concept to a list of literal objects associated with it.
 
-A concept may be represented literally, metaphorically, photographically, graphically, symbolically, or through a constructed combination of these. Choose the representation that best communicates the idea.
+A concept may be represented literally, metaphorically, photographically, graphically, symbolically, or through a constructed combination of these. Choose the representation that best communicates the idea without changing its meaning.
 
 Complexity should usually exist **inside** a visual layer or perceptual object, not by making many unrelated elements compete across the same plane.
 
