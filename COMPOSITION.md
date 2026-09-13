@@ -12,6 +12,23 @@ The goal is not few objects. The goal is few competing visual structures.
 
 A thumbnail may contain many literal elements while still reading as simple when those elements belong to a small number of clear perceptual layers or groups.
 
+## Concept Fidelity
+
+Before solving composition, identify what the concept actually means.
+
+Do not replace the concept with an adjacent aesthetic that happens to be easier to visualize.
+
+Examples of invalid substitution:
+
+- pleasure → luxury lifestyle
+- intelligence → expensive technology
+- success → wealth and designer products
+- dopamine or compulsive gratification → elegant comfort
+
+These may overlap in some concepts, but they are not interchangeable. If the source idea points toward temptation, stimulation, consumption, compulsion, unhealthy habits, or immediate gratification, preserve those meanings in the visual representation.
+
+If the user provides specific conceptual anchors, treat them as meaningful inputs rather than optional decoration. Do not silently replace them with generic, more aesthetically pleasing symbols.
+
 ## Concept Before Objects
 
 Do not translate a concept directly into a checklist of objects associated with it.
@@ -27,7 +44,7 @@ Possible representations include:
 - a graphic construction
 - a combination of these
 
-Choose the representation that communicates the idea most clearly at thumbnail scale.
+Choose the representation that communicates the idea most clearly at thumbnail scale without changing the concept.
 
 A complex concept should often be compressed into one dominant visual construction rather than represented by many equally important symbols.
 
@@ -93,7 +110,9 @@ Denser compositions are appropriate when complexity is part of the message.
 
 When using many elements, group them into a small number of coherent masses or layers. Do not distribute equally detailed elements uniformly across the frame.
 
-Complexity should generally increase within a layer rather than by adding more competing layers.
+Complexity should generally increase **within** a layer rather than by adding more competing layers.
+
+A dense layer does not mean every element inside it must be individually prominent. Internal detail may vary strongly in scale, focus, contrast and legibility while the layer continues to read as one perceptual object.
 
 Do not fill available space simply because it is empty.
 
@@ -143,12 +162,14 @@ Controlled asymmetry is often preferable to mechanically symmetrical arrangement
 
 The composition must remain understandable when viewed small.
 
-Reduce the image aggressively and ask whether the major layers still read in the intended order.
+Reduce the image aggressively and ask whether the major layers still read in the intended order and whether the concept is still the same concept.
 
 If reducing the thumbnail causes the hierarchy to collapse, simplify, enlarge, reposition, separate, or remove the relevant element.
+
+If the image is attractive but the concept has become an adjacent idea, reject it regardless of visual polish.
 
 ## Final Rule
 
 Do not optimize for the maximum amount of visual information.
 
-Optimize for the maximum amount of useful information that can be perceived quickly.
+Optimize for the maximum amount of useful information that can be perceived quickly **without sacrificing conceptual fidelity**.
