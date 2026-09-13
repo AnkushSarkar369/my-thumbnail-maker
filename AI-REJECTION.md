@@ -1,14 +1,14 @@
 # AI Rejection
 
-This file defines visual characteristics that should be rejected or corrected when they make an image feel obviously AI-generated or visually artificial.
+This file defines visual characteristics that should be rejected or corrected when they make an image feel obviously AI-generated or visually artificial, or when generation quality damages the thumbnail's hierarchy.
 
 ## Core Principle
 
 Do not judge an image by whether it is technically photorealistic.
 
-Judge whether it has photographic credibility.
+Judge whether it has photographic credibility **and whether its visual structure remains intentional**.
 
-An impressive image is still a failure if the viewer can immediately feel that it is synthetic.
+An impressive image is still a failure if the viewer can immediately feel that it is synthetic, chaotic, flat, or compositionally unresolved.
 
 ## Reject
 
@@ -34,6 +34,57 @@ Reject or correct:
 - excessive blur
 - artificial glow or atmospheric effects
 - obvious AI compositing
+- flat compositions where subject, typography and background have no meaningful separation
+- chaotic compositions where unrelated elements have equal visual authority
+- semantic inventories where every object is presented as a separate focal point
+- decorative detail added only to fill empty space
+
+## Composition Failure
+
+A generated image can be technically well-rendered and still fail as a thumbnail.
+
+Reject or rework the image when:
+
+- there is no clear first read
+- major layers collapse into the same visual plane
+- the subject does not separate from the background
+- typography does not separate from imagery
+- the background contains many equally strong focal points
+- complexity is distributed uniformly instead of organized into groups or layers
+- the concept has been reduced to a checklist of literal symbols
+- a conceptual idea has been unnecessarily literalized into a room or object inventory
+- the image feels busy without having a dominant visual structure
+- the image looks like a collection of attractive elements rather than one visual statement
+
+## Conceptual Abstraction
+
+When the concept is abstract, do not assume that it should be represented by many literal objects.
+
+A stronger solution may use a single visual metaphor, constructed form, montage, spatial field, or other unified representation.
+
+Multiple literal elements are acceptable when they collectively form one perceptual object or one clearly defined layer.
+
+Reject visual complexity that has no unifying structure.
+
+## Layers & Separation
+
+Complex thumbnails should remain legible as distinct major layers or perceptual structures.
+
+Check whether the intended subject, typography, conceptual field, and other major structures can be distinguished from one another through some combination of:
+
+- scale
+- depth
+- focus
+- luminance
+- contrast
+- colour
+- negative space
+- occlusion
+- edge clarity
+- texture
+- lighting
+
+Overlap is acceptable. Flattening is not.
 
 ## Backgrounds
 
@@ -48,7 +99,7 @@ Background elements should occupy believable physical space and have appropriate
 - focus
 - lighting
 
-A complex background is acceptable when it is coherent.
+A complex background is acceptable when it is coherent and subordinate to the intended hierarchy.
 
 A simple background is preferable when additional detail does not contribute to the concept.
 
@@ -88,10 +139,14 @@ Do not make every surface perfectly clean, sharp, symmetrical, or polished.
 
 Before accepting AI-generated imagery, ask:
 
-"Could this plausibly have been photographed?"
+"Does this image have one unmistakable visual statement, with a clear hierarchy and deliberate separation?"
 
-If the answer is no, identify the specific artificial characteristic and correct that characteristic rather than adding more effects.
+Then ask:
+
+"Could this plausibly have been photographed or intentionally constructed as shown?"
+
+If either answer is no, identify the specific failure and correct that characteristic rather than adding more effects or detail.
 
 The objective is not to hide that AI was used.
 
-The objective is to produce imagery with enough physical and photographic credibility that the method of creation is irrelevant.
+The objective is to produce imagery with enough physical and photographic credibility, abstraction control, hierarchy and separation that the method of creation is irrelevant.
