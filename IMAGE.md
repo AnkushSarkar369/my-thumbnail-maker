@@ -21,6 +21,10 @@ Do not make an image more realistic than the concept requires.
 
 A conceptual or constructed image can remain visibly constructed while still having coherent materials, scale, depth and image treatment.
 
+Do not confuse constructed photography with a literal physical scene. A conceptual montage may deliberately combine photographic fragments, images, textures, graphics or objects without pretending that everything occupies one real location.
+
+Likewise, do not convert an abstract or conceptual idea into a literal lifestyle scene merely because a physical room is easier for an image model to render.
+
 ## Lighting
 
 Lighting is concept-dependent.
@@ -91,15 +95,18 @@ When generating imagery, prioritize:
 
 - coherent anatomy
 - believable perspective
-- realistic spatial relationships
-- natural object placement
+- realistic spatial relationships where physical space is implied
+- natural object placement where physical space is implied
 - physically plausible lighting
 - appropriate environmental detail
 - clear perceptual separation
+- fidelity to the intended visual representation
 
 Do not maximize background complexity.
 
 A background may contain substantial detail, but detail should be organized into meaningful groups or layers and should not flatten the hierarchy.
+
+Do not allow the generator's preferred visual tropes to replace the concept. For example, an idea about pleasure, temptation or gratification should not automatically become an affluent interior, luxury advertisement, resort, designer-product scene or polished lifestyle photograph unless the concept actually calls for those things.
 
 ## Image Treatment
 
@@ -119,4 +126,4 @@ In particular, do not default to:
 
 The image should look like a deliberate visual choice, not like an AI-generated image that has been heavily processed to appear impressive.
 
-Photographic detail, depth and effects are subordinate to the composition. Do not let image treatment erase the distinction between the thumbnail's major visual layers.
+Photographic detail, depth and effects are subordinate to the composition and concept. Do not let image treatment erase the distinction between the thumbnail's major visual layers or silently change the meaning of the idea.
