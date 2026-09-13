@@ -1,14 +1,14 @@
 # AI Rejection
 
-This file defines visual characteristics that should be rejected or corrected when they make an image feel obviously AI-generated or visually artificial, or when generation quality damages the thumbnail's hierarchy.
+This file defines visual characteristics that should be rejected or corrected when they make an image feel obviously AI-generated or visually artificial, or when generation quality damages the thumbnail's hierarchy or conceptual fidelity.
 
 ## Core Principle
 
 Do not judge an image by whether it is technically photorealistic.
 
-Judge whether it has photographic credibility **and whether its visual structure remains intentional**.
+Judge whether it has photographic credibility, intentional visual structure, and fidelity to the intended concept.
 
-An impressive image is still a failure if the viewer can immediately feel that it is synthetic, chaotic, flat, or compositionally unresolved.
+An impressive image is still a failure if the viewer can immediately feel that it is synthetic, chaotic, flat, compositionally unresolved, or about the wrong thing.
 
 ## Reject
 
@@ -38,6 +38,25 @@ Reject or correct:
 - chaotic compositions where unrelated elements have equal visual authority
 - semantic inventories where every object is presented as a separate focal point
 - decorative detail added only to fill empty space
+- attractive imagery that substitutes an adjacent concept for the actual concept
+- luxury, wealth, elegance, or lifestyle imagery introduced when the source idea does not call for it
+
+## Conceptual Failure
+
+A thumbnail can be visually polished and still be wrong.
+
+Reject or rework it when the visual representation has drifted from the source idea.
+
+Do not accept an adjacent aesthetic merely because it looks more sophisticated, beautiful, cinematic, or commercially polished.
+
+Examples:
+
+- pleasure is not automatically luxury
+- dopamine is not automatically comfort
+- success is not automatically wealth
+- intelligence is not automatically expensive technology
+
+The representation must preserve the meaning of the source concept. If the concept contains concrete anchors, those anchors should not be silently replaced by generic aesthetic substitutes.
 
 ## Composition Failure
 
@@ -63,6 +82,8 @@ When the concept is abstract, do not assume that it should be represented by man
 A stronger solution may use a single visual metaphor, constructed form, montage, spatial field, or other unified representation.
 
 Multiple literal elements are acceptable when they collectively form one perceptual object or one clearly defined layer.
+
+Do not confuse a unified perceptual layer with a single literal object. A photographic collage, montage, or dense visual field may contain many elements while still functioning as one background layer.
 
 Reject visual complexity that has no unifying structure.
 
@@ -90,7 +111,7 @@ Overlap is acceptable. Flattening is not.
 
 Do not maximize the number of objects in a background.
 
-Background elements should occupy believable physical space and have appropriate:
+Background elements should occupy believable physical space when physical space is implied and have appropriate:
 
 - scale
 - depth
@@ -139,14 +160,16 @@ Do not make every surface perfectly clean, sharp, symmetrical, or polished.
 
 Before accepting AI-generated imagery, ask:
 
-"Does this image have one unmistakable visual statement, with a clear hierarchy and deliberate separation?"
+"Does this image communicate the intended concept rather than an adjacent aesthetic?"
+
+"Does it have one unmistakable visual statement, with a clear hierarchy and deliberate separation?"
 
 Then ask:
 
 "Could this plausibly have been photographed or intentionally constructed as shown?"
 
-If either answer is no, identify the specific failure and correct that characteristic rather than adding more effects or detail.
+If any answer is no, identify the specific failure and correct that characteristic rather than adding more effects or detail.
 
 The objective is not to hide that AI was used.
 
-The objective is to produce imagery with enough physical and photographic credibility, abstraction control, hierarchy and separation that the method of creation is irrelevant.
+The objective is to produce imagery with enough physical and photographic credibility, abstraction control, hierarchy, separation and conceptual fidelity that the method of creation is irrelevant.
