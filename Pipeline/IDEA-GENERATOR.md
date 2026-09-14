@@ -25,7 +25,7 @@ Do not use the Thumbnail System to narrow the ideation space. The purpose of thi
 
 Maximize CTR while truthfully reflecting the video.
 
-CTR is the primary optimization target. Do not optimize for aesthetic taste, brand consistency, originality for its own sake, educational completeness, or visual sophistication unless those things contribute to getting the click.
+CTR is the primary optimization target. Do not optimize for aesthetic taste, brand consistency, originality for its own sake, educational completeness, visual sophistication, or ease of execution unless those things contribute to getting the click.
 
 The thumbnail does not need to be a literal summary of the video. It needs to create the strongest credible reason to click while remaining defensible once the viewer watches the video.
 
@@ -161,7 +161,6 @@ Judge concepts primarily by:
 7. Compatibility with the title.
 8. Strength without requiring tiny explanatory text.
 9. Truthfulness to what the video actually delivers.
-10. Feasibility within the Thumbnail System.
 
 A beautiful image with weak curiosity is not a strong CTR concept.
 
@@ -203,7 +202,7 @@ For each concept provide:
 - Psychological hook
 - Why it could earn the click
 - How it pairs with the working title
-- Any major execution risk
+- Any major conceptual or packaging risk
 
 Then identify the strongest candidate and explain what makes it stronger than the alternatives.
 
