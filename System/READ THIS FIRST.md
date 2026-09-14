@@ -8,14 +8,14 @@ It is not a fixed aesthetic or branding template. It defines the visual grammar 
 
 The repository is divided into three layers:
 
-### `Skills/`
+### `Design/`
 
-The visual skills used to construct the thumbnail.
+The visual design skills used to construct the thumbnail.
 
-- `Skills/COMPOSITION.md` — perceptual structure, layers, hierarchy, density, spacing and visual flow.
-- `Skills/TYPOGRAPHY.md` — typefaces, typographic roles, hierarchy and text treatment.
-- `Skills/COLOUR.md` — colour selection, restraint, contrast and palette decisions.
-- `Skills/IMAGE.md` — photography, imagery, lighting, depth, texture and visual treatment.
+- `Design/COMPOSITION.md` — perceptual structure, layers, hierarchy, density, spacing and visual flow.
+- `Design/TYPOGRAPHY.md` — typefaces, typographic roles, hierarchy and text treatment.
+- `Design/COLOUR.md` — colour selection, restraint, contrast and palette decisions.
+- `Design/IMAGE.md` — photography, imagery, lighting, depth, texture and visual treatment.
 
 ### `System/`
 
@@ -32,7 +32,16 @@ The operational creative tools that sit outside the visual design system.
 - `Pipeline/IDEA-GENERATOR.md` — discovers and evaluates thumbnail/package concepts for CTR.
 - `Pipeline/PROMPT-MAKER.md` — turns an already-selected concept into an execution-ready image-generation prompt using the Thumbnail System.
 
-The `Pipeline/` files are deliberately separated from the visual system. Ideation discovers the concept; the Thumbnail System executes it.
+### `[Prompt] ...`
+
+The reusable GPT prompts used to invoke the two pipeline stages.
+
+- `[Prompt] Idea Generation.md` — the user-facing prompt for invoking the upstream ideation stage.
+- `[Prompt] Prompt Maker.md` — the user-facing prompt for invoking the downstream prompt-making stage.
+
+The `[Prompt]` files are invocation prompts. They are not replacements for the `Pipeline/` frameworks.
+
+The `Pipeline/` files define the actual stage behavior. `System/` and `Design/` define the visual authority used during execution.
 
 ## How to use this system
 
@@ -43,7 +52,7 @@ When creating a thumbnail:
 3. Decide what the viewer must perceive first, second, and afterward.
 4. Determine the strongest visual representation of the idea before selecting individual objects or effects.
 5. Establish the major perceptual layers of the composition and keep them visually distinct.
-6. Apply only the relevant rules from `Skills/` and `System/`.
+6. Apply only the relevant rules from `Design/` and `System/`.
 7. Do not force rules that make the concept weaker.
 8. Prefer intentional visual decisions over decoration.
 9. Preserve successful creative decisions during iteration.
@@ -113,7 +122,7 @@ The `Pipeline/` files are not additional visual design rules.
 
 `Pipeline/IDEA-GENERATOR.md` is the upstream ideation layer. It determines which concept or packaging direction is strongest. It must remain independent from the visual design system so that ideation does not become constrained by execution rules.
 
-`Pipeline/PROMPT-MAKER.md` is the downstream execution layer. It takes a chosen concept and applies this Thumbnail System to produce an image-generation prompt. It must not independently replace the upstream concept with a new one.
+`Pipeline/PROMPT-MAKER.md` is the downstream execution layer. It takes a chosen concept and applies the Thumbnail System to produce an image-generation prompt. It must not independently replace the upstream concept with a new one.
 
 The intended flow is:
 
@@ -126,7 +135,8 @@ If a strong thumbnail concept has already been chosen, skip ideation and go dire
 Keep the stages separate:
 
 - `Pipeline/IDEA-GENERATOR.md` discovers the package.
-- `System/` and `Skills/` govern visual execution.
+- `System/` and `Design/` govern visual execution.
 - `Pipeline/PROMPT-MAKER.md` translates the chosen package into an executable prompt.
+- `[Prompt] Idea Generation.md` and `[Prompt] Prompt Maker.md` invoke their respective pipeline stages; they do not replace those frameworks.
 
 An upstream stage must not import downstream constraints unless explicitly required by the user. A downstream stage must not reopen upstream ideation when a concept has already been selected.
