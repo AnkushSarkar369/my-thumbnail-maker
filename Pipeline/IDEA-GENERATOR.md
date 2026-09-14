@@ -13,10 +13,10 @@ When using this file, do **not** read, consult, or apply any of the following as
 - `System/READ THIS FIRST.md`
 - `System/ANKUSH.md`
 - `System/AI-REJECTION.md`
-- `Skills/COMPOSITION.md`
-- `Skills/TYPOGRAPHY.md`
-- `Skills/COLOUR.md`
-- `Skills/IMAGE.md`
+- `Design/COMPOSITION.md`
+- `Design/TYPOGRAPHY.md`
+- `Design/COLOUR.md`
+- `Design/IMAGE.md`
 - `Pipeline/PROMPT-MAKER.md`
 
 Do not use the Thumbnail System to narrow the ideation space. The purpose of this stage is to discover the strongest truthful package first. Visual execution constraints are applied downstream.
@@ -83,7 +83,7 @@ The visual representation may introduce information that never literally appears
 
 Do not restrict ideation to Ankush's own references, previous thumbnails, or self-improvement conventions.
 
-Search conceptually across mechanisms used by:
+Explore mechanisms used by:
 
 - advertising
 - film and television posters
@@ -161,6 +161,8 @@ Judge concepts primarily by:
 7. Compatibility with the title.
 8. Strength without requiring tiny explanatory text.
 9. Truthfulness to what the video actually delivers.
+
+Do not use downstream visual execution constraints to reject a concept at this stage. A concept may be difficult to execute; that is a downstream problem. Reject it here only if the underlying package is weak, misleading, or otherwise fails the ideation objective.
 
 A beautiful image with weak curiosity is not a strong CTR concept.
 
