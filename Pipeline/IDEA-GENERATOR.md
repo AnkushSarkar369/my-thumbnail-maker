@@ -2,7 +2,24 @@
 
 This file defines the upstream creative layer for thumbnail ideation.
 
-The Thumbnail System and PROMPT-MAKER.md execute a thumbnail concept. This file determines what that concept should be when no strong concept has already been supplied.
+The Thumbnail System and `Pipeline/PROMPT-MAKER.md` execute a thumbnail concept. This file determines what that concept should be when no strong concept has already been supplied.
+
+## Scope Isolation
+
+This file is an ideation tool, not a visual design manual.
+
+When using this file, do **not** read, consult, or apply any of the following as creative or visual constraints:
+
+- `System/READ THIS FIRST.md`
+- `System/ANKUSH.md`
+- `System/AI-REJECTION.md`
+- `Skills/COMPOSITION.md`
+- `Skills/TYPOGRAPHY.md`
+- `Skills/COLOUR.md`
+- `Skills/IMAGE.md`
+- `Pipeline/PROMPT-MAKER.md`
+
+Do not use the Thumbnail System to narrow the ideation space. The purpose of this stage is to discover the strongest truthful package first. Visual execution constraints are applied downstream.
 
 ## Objective
 

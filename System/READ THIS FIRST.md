@@ -4,6 +4,36 @@ This is Ankush's visual design system for YouTube thumbnails.
 
 It is not a fixed aesthetic or branding template. It defines the visual grammar and decisions that should remain consistent across thumbnails while allowing the visual treatment to change according to the video's concept.
 
+## Repository Structure
+
+The repository is divided into three layers:
+
+### `Skills/`
+
+The visual skills used to construct the thumbnail.
+
+- `Skills/COMPOSITION.md` — perceptual structure, layers, hierarchy, density, spacing and visual flow.
+- `Skills/TYPOGRAPHY.md` — typefaces, typographic roles, hierarchy and text treatment.
+- `Skills/COLOUR.md` — colour selection, restraint, contrast and palette decisions.
+- `Skills/IMAGE.md` — photography, imagery, lighting, depth, texture and visual treatment.
+
+### `System/`
+
+The governing rules and identity constraints.
+
+- `System/READ THIS FIRST.md` — this entry point and the overall visual philosophy.
+- `System/ANKUSH.md` — representation and integration of Ankush within thumbnails.
+- `System/AI-REJECTION.md` — visual problems that should be rejected or corrected.
+
+### `Pipeline/`
+
+The operational creative tools that sit outside the visual design system.
+
+- `Pipeline/IDEA-GENERATOR.md` — discovers and evaluates thumbnail/package concepts for CTR.
+- `Pipeline/PROMPT-MAKER.md` — turns an already-selected concept into an execution-ready image-generation prompt using the Thumbnail System.
+
+The `Pipeline/` files are deliberately separated from the visual system. Ideation discovers the concept; the Thumbnail System executes it.
+
 ## How to use this system
 
 When creating a thumbnail:
@@ -13,7 +43,7 @@ When creating a thumbnail:
 3. Decide what the viewer must perceive first, second, and afterward.
 4. Determine the strongest visual representation of the idea before selecting individual objects or effects.
 5. Establish the major perceptual layers of the composition and keep them visually distinct.
-6. Apply only the relevant rules from this system.
+6. Apply only the relevant rules from `Skills/` and `System/`.
 7. Do not force rules that make the concept weaker.
 8. Prefer intentional visual decisions over decoration.
 9. Preserve successful creative decisions during iteration.
@@ -26,7 +56,7 @@ The concept is the highest-level constraint.
 
 Do not substitute an adjacent idea because it is visually easier, more aesthetically familiar, or more conventional.
 
-Aesthetic associations are not conceptual equivalence. For example, pleasure does not automatically mean luxury, wealth, elegance, expensive products, resorts, or affluent lifestyle imagery. Hedonism does not automatically mean luxury. If the concept is about dopamine, temptation, compulsive gratification, bad habits, or immediate pleasure, the visual representation must preserve those meanings rather than replacing them with a more attractive adjacent aesthetic.
+Aesthetic associations are not conceptual equivalence. For example, pleasure does not automatically mean luxury, wealth, status, sophistication, expensive products, resorts, or affluent lifestyle imagery. Hedonism does not automatically mean luxury. If the concept is about dopamine, temptation, compulsive gratification, bad habits, or immediate pleasure, the visual representation must preserve those meanings rather than replacing them with a more attractive adjacent aesthetic.
 
 When the concept contains specific creative anchors, preserve those anchors unless the user explicitly asks for reinterpretation. Do not replace them with generic symbols merely because they are safer, cleaner, more conventional, or easier to render.
 
@@ -65,15 +95,6 @@ Use separation deliberately through combinations of:
 
 A thumbnail can be visually dense while still feeling simple when the major layers are clear.
 
-## Files
-
-- `COMPOSITION.md` — perceptual structure, layers, hierarchy, density, spacing and visual flow.
-- `TYPOGRAPHY.md` — typefaces, typographic roles, hierarchy and text treatment.
-- `COLOUR.md` — colour selection, restraint, contrast and palette decisions.
-- `IMAGE.md` — photography, imagery, lighting, depth, texture and visual treatment.
-- `ANKUSH.md` — representation and integration of Ankush within thumbnails.
-- `AI-REJECTION.md` — visual problems that should be rejected or corrected.
-
 ## Important
 
 The thumbnail concept comes first.
@@ -86,10 +107,26 @@ When a visual reference is supplied, preserve its relevant visual grammar—such
 
 When Ankush is required inside an AI-generated or constructed scene, his real photographic identity reference should generally be introduced at the final replacement stage rather than throughout the generation and iteration process. This prevents his identity from progressively degrading into AI-generated features.
 
-## Relationship to the Thumbnail Workflow
+## Relationship to the Pipeline
 
-This system defines **what the thumbnail should look and feel like**.
+The `Pipeline/` files are not additional visual design rules.
 
-The separate Thumbnail Workflow defines **how the thumbnail is produced, evaluated and iterated**.
+`Pipeline/IDEA-GENERATOR.md` is the upstream ideation layer. It determines which concept or packaging direction is strongest. It must remain independent from the visual design system so that ideation does not become constrained by execution rules.
 
-Do not duplicate the operational workflow here.
+`Pipeline/PROMPT-MAKER.md` is the downstream execution layer. It takes a chosen concept and applies this Thumbnail System to produce an image-generation prompt. It must not independently replace the upstream concept with a new one.
+
+The intended flow is:
+
+**video → ideation/package concept → Thumbnail System → image-generation prompt → thumbnail**
+
+If a strong thumbnail concept has already been chosen, skip ideation and go directly to the Thumbnail System and prompt-making stage.
+
+## Scope Rule
+
+Keep the stages separate:
+
+- `Pipeline/IDEA-GENERATOR.md` discovers the package.
+- `System/` and `Skills/` govern visual execution.
+- `Pipeline/PROMPT-MAKER.md` translates the chosen package into an executable prompt.
+
+An upstream stage must not import downstream constraints unless explicitly required by the user. A downstream stage must not reopen upstream ideation when a concept has already been selected.
