@@ -337,20 +337,22 @@ def main():
     # ─────────────────────────────────────────────────────────────────────────
 
     output = video.with_name("Pass A.mov")
+    audio_output = video.with_name("To Clean.flac")
 
-    if output.exists():
-        print(
-            f"{c('WARNING', YELLOW)} Output already exists:\n"
-            f"  {output}"
-        )
+    for existing_output in (output, audio_output):
+        if existing_output.exists():
+            print(
+                f"{c('WARNING', YELLOW)} Output already exists:\\n"
+                f"  {existing_output}"
+            )
 
-        answer = input("Overwrite it? [y/N] ").strip().lower()
+            answer = input("Overwrite it? [y/N] ").strip().lower()
 
-        if answer != "y":
-            print("Cancelled.")
-            sys.exit(0)
+            if answer != "y":
+                print("Cancelled.")
+                sys.exit(0)
 
-        output.unlink()
+            existing_output.unlink()
 
     # ─────────────────────────────────────────────────────────────────────────
     # Temporary workspace
@@ -492,6 +494,31 @@ def main():
             print(
                 f"  Expected : {format_time(kept_duration)}"
             )
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Extract audio to lossless FLAC
+        # ─────────────────────────────────────────────────────────────────────
+
+        run_ffmpeg(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel", "warning",
+                "-i", str(output),
+                "-map", "0:a:0",
+                "-vn",
+                "-c:a", "flac",
+                "-compression_level", "8",
+                "-y",
+                str(audio_output),
+            ],
+            "Creating lossless FLAC audio"
+        )
+
+        audio_duration = get_duration(audio_output)
+
+        print(f"  Audio    : {audio_output}")
+        print(f"  Audio duration: {format_time(audio_duration)}")
 
     finally:
 
