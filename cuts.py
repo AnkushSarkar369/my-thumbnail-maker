@@ -272,7 +272,7 @@ def main():
     parser.add_argument(
         "-o",
         "--output",
-        help="Output filename (default: SOURCE_cut.EXT)"
+        help="Output filename (default: Final.mp4 next to source)"
     )
 
     parser.add_argument(
@@ -350,9 +350,7 @@ def main():
     if args.output:
         output = Path(args.output).expanduser().resolve()
     else:
-        output = video.with_name(
-            video.stem + "_cut" + video.suffix
-        )
+        output = video.with_name("Final.mp4")
 
     if output.exists():
         print(
@@ -471,6 +469,9 @@ def main():
 
             "-map", "0",
             "-c", "copy",
+
+            # Move MP4 metadata to the beginning for faster playback startup.
+            "-movflags", "+faststart",
 
             "-y",
             str(output),
