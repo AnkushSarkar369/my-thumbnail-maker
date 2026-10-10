@@ -350,7 +350,7 @@ def main():
     if args.output:
         output = Path(args.output).expanduser().resolve()
     else:
-        output = video.with_name("Final.mp4")
+        output = video.with_name(f"Final{video.suffix}")
 
     if output.exists():
         print(
@@ -469,9 +469,6 @@ def main():
 
             "-map", "0",
             "-c", "copy",
-
-            # Move MP4 metadata to the beginning for faster playback startup.
-            "-movflags", "+faststart",
 
             "-y",
             str(output),
