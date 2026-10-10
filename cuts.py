@@ -496,8 +496,61 @@ def main():
             )
 
         # ─────────────────────────────────────────────────────────────────────
-        # Extract audio to lossless FLAC
+        # Normalize audio from Pass A.mov, then encode as lossless FLAC
         # ─────────────────────────────────────────────────────────────────────
+        #
+        # First pass measures peak level after a 1 Hz high-pass filter, which
+        # removes DC offset. Second pass applies the gain needed for a -1 dBFS
+        # peak and writes FLAC. The video pipeline above remains unchanged.
+        # ─────────────────────────────────────────────────────────────────────
+
+        print(f"\n{c('AUDIO NORMALIZATION', BOLD + CYAN)}")
+        print("  Measuring peak and removing DC offset...")
+
+        analysis = subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-nostats",
+                "-i", str(output),
+                "-map", "0:a:0",
+                "-vn",
+                "-af", "highpass=f=1,volumedetect",
+                "-f", "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        if analysis.returncode != 0:
+            die(
+                "Could not analyze audio in Pass A.mov.\n"
+                f"{analysis.stderr[-2000:]}"
+            )
+
+        import re
+
+        peak_match = re.search(
+            r"max_volume:\s*(-?inf|-?[0-9.]+) dB",
+            analysis.stderr,
+        )
+
+        if not peak_match:
+            die("FFmpeg could not determine the audio peak.")
+
+        peak_text = peak_match.group(1)
+
+        if peak_text == "-inf":
+            die("The audio in Pass A.mov is silent; normalization is impossible.")
+
+        peak_db = float(peak_text)
+        target_db = -1.0
+        gain_db = target_db - peak_db
+
+        print(f"  Measured peak : {peak_db:.2f} dBFS")
+        print(f"  Target peak   : {target_db:.2f} dBFS")
+        print(f"  Applied gain  : {gain_db:+.2f} dB")
 
         run_ffmpeg(
             [
@@ -507,12 +560,13 @@ def main():
                 "-i", str(output),
                 "-map", "0:a:0",
                 "-vn",
+                "-af", f"highpass=f=1,volume={gain_db:.8f}dB",
                 "-c:a", "flac",
                 "-compression_level", "8",
                 "-y",
                 str(audio_output),
             ],
-            "Creating lossless FLAC audio"
+            "Normalizing audio and creating lossless FLAC"
         )
 
         audio_duration = get_duration(audio_output)
