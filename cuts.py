@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import argparse
 import shutil
 import subprocess
 import sys
@@ -252,42 +251,32 @@ def run_ffmpeg(command, description):
 
 def main():
 
-    parser = argparse.ArgumentParser(
-        description=(
-            "Lossless second-precision video cutter. "
-            "Ranges in cuts.txt are DELETE ranges."
-        )
-    )
-
-    parser.add_argument(
-        "video",
-        help="Source video"
-    )
-
-    parser.add_argument(
-        "cuts",
-        help="Text file containing DELETE ranges"
-    )
-
-    parser.add_argument(
-        "-o",
-        "--output",
-        help="Output filename (default: Final.mp4 next to source)"
-    )
-
-    parser.add_argument(
-        "--keep-temp",
-        action="store_true",
-        help="Keep temporary clips after completion"
-    )
-
-    args = parser.parse_args()
-
     check_dependency("ffmpeg")
     check_dependency("ffprobe")
 
-    video = Path(args.video).expanduser().resolve()
-    cuts_file = Path(args.cuts).expanduser().resolve()
+    # Run directly from the file manager: use the video and cuts.txt beside
+    # this script. Exactly one source video must be present in the folder.
+    script_dir = Path(__file__).resolve().parent
+    video_extensions = {
+        ".mov", ".mp4", ".mkv", ".avi", ".m4v", ".webm",
+        ".mts", ".m2ts", ".mpg", ".mpeg", ".wmv", ".flv", ".ts",
+    }
+    candidates = [
+        path for path in script_dir.iterdir()
+        if path.is_file()
+        and path.suffix.lower() in video_extensions
+        and path.name != "Pass A.mov"
+    ]
+
+    if len(candidates) != 1:
+        names = "\\n".join(f"  {path.name}" for path in candidates) or "  (none)"
+        die(
+            "Expected exactly one source video beside cuts.py. Found "
+            f"{len(candidates)}:\\n{names}"
+        )
+
+    video = candidates[0].resolve()
+    cuts_file = (script_dir / "cuts.txt").resolve()
 
     if not video.is_file():
         die(f"Source video does not exist:\n{video}")
@@ -347,10 +336,7 @@ def main():
     # Output path
     # ─────────────────────────────────────────────────────────────────────────
 
-    if args.output:
-        output = Path(args.output).expanduser().resolve()
-    else:
-        output = video.with_name("Final.mov")
+    output = video.with_name("Pass A.mov")
 
     if output.exists():
         print(
@@ -513,20 +499,13 @@ def main():
         # Cleanup
         # ─────────────────────────────────────────────────────────────────────
 
-        if args.keep_temp:
-            print()
-            print(
-                f"{c('TEMP FILES KEPT', YELLOW)}\n"
-                f"  {work_dir}"
-            )
-        else:
-            shutil.rmtree(work_dir, ignore_errors=True)
+        shutil.rmtree(work_dir, ignore_errors=True)
 
-            print()
-            print(
-                f"{c('CLEANUP', DIM)} "
-                f"Temporary clips removed."
-            )
+        print()
+        print(
+            f"{c('CLEANUP', DIM)} "
+            f"Temporary clips removed."
+        )
 
 
 if __name__ == "__main__":
