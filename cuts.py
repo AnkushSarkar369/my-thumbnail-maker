@@ -46,8 +46,37 @@ def format_size(path):
 
 
 def die(message):
-    print(f"\n{c('ERROR', RED)} {message}\n")
+    print(f"\n{c('✗ ERROR', RED + BOLD)} {message}\n")
     sys.exit(1)
+
+
+def print_header():
+    width = 64
+    title = "LOSSLESS VIDEO CUTTER"
+    border = "─" * (width - 2)
+
+    print()
+    print(c(f"╭{border}╮", BLUE))
+    padding = " " * (width - len(title) - 4)
+    print(f"{c('│', BLUE)} {c(title, BOLD + BLUE)}{padding} {c('│', BLUE)}")
+    print(c(f"╰{border}╯", BLUE))
+    print(c("  Stream-copy video  ·  Peak-normalized lossless audio", DIM))
+
+
+def print_section(title, colour=CYAN):
+    print()
+    print(c(f"  {title.upper()}", BOLD + colour))
+    print(c("  " + "─" * 58, DIM))
+
+
+def print_field(label, value):
+    print(f"  {c(f'{label:<12}', DIM)} {value}")
+
+
+def print_stage(number, total, title, detail=None):
+    print_section(f"[{number}/{total}] {title}", GREEN)
+    if detail:
+        print(f"  {DIM}{detail}{RESET}")
 
 
 def check_dependency(name):
@@ -265,18 +294,17 @@ def calculate_keep_ranges(cuts, duration):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def print_ranges(title, ranges, colour):
-    print(f"\n{c(title, colour)}")
+    print_section(f"{title} · {len(ranges)} range(s)", colour)
 
     if not ranges:
-        print(f"  {DIM}(none){RESET}")
+        print(f"  {DIM}None{RESET}")
         return
 
-    for i, (start, end) in enumerate(ranges, 1):
+    for index, (start, end) in enumerate(ranges, 1):
         duration = end - start
-
         print(
-            f"  {c(f'{i:02d}', DIM)}  "
-            f"{format_time(start)} → {format_time(end)}  "
+            f"  {c(f'{index:02d}', DIM)}  "
+            f"{format_time(start):>8}  →  {format_time(end):<8} "
             f"{DIM}({format_time(duration)}){RESET}"
         )
 
@@ -286,7 +314,7 @@ def print_ranges(title, ranges, colour):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def run_ffmpeg(command, description):
-    print(f"\n{c('▶', CYAN)} {description}")
+    print(f"  {c('▶', CYAN)} {description}")
     started_at = time.perf_counter()
     process = subprocess.run(command)
     if process.returncode != 0:
@@ -294,7 +322,8 @@ def run_ffmpeg(command, description):
             f"FFmpeg failed while {description.lower()}.\n"
             f"Nothing was done to the original source."
         )
-    print(f"  {DIM}Completed in {format_elapsed(time.perf_counter() - started_at)}{RESET}")
+    elapsed = format_elapsed(time.perf_counter() - started_at)
+    print(f"    {c('✓', GREEN)} {DIM}Completed in {elapsed}{RESET}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -340,13 +369,8 @@ def main():
     # Source information
     # ─────────────────────────────────────────────────────────────────────────
 
-    print()
-    print(c("=" * 64, BLUE))
-    print(c(" LOSSLESS VIDEO CUTTER ", BOLD + BLUE))
-    print(c("=" * 64, BLUE))
-
-    print(f"\n{c('SOURCE', CYAN)}")
-    print(f"  {video}")
+    print_header()
+    print_section("Source")
 
     duration = get_duration(video)
     source_streams = get_stream_types(video)
@@ -354,8 +378,17 @@ def main():
         die("The selected source does not contain a video stream.")
     if "audio" not in source_streams:
         die("The selected source has no audio stream; an audio FLAC cannot be created.")
-    print(f"  Duration: {c(format_time(duration), BOLD)}")
-    print(f"  Streams : {', '.join(sorted(source_streams))}")
+
+    print_field("File", video.name)
+    print_field("Folder", video.parent)
+    print_field("Duration", c(format_time(duration), BOLD))
+    stream_label = " + ".join(
+        stream.title() for stream in ("video", "audio") if stream in source_streams
+    )
+    other_streams = sorted(source_streams - {"video", "audio"})
+    if other_streams:
+        stream_label += " + " + " + ".join(stream.title() for stream in other_streams)
+    print_field("Streams", stream_label)
 
     # ─────────────────────────────────────────────────────────────────────────
     # Read DELETE ranges
@@ -382,12 +415,10 @@ def main():
 
     print_ranges("KEEP", keep, GREEN)
 
-    print()
-    print(c("EDIT SUMMARY", MAGENTA))
-    print(f"  Original : {format_time(duration)}")
-    print(f"  Removed  : {format_time(removed_duration)}")
-    print(f"  Final    : {c(format_time(kept_duration), BOLD + GREEN)}")
-    print()
+    print_section("Edit summary", MAGENTA)
+    print_field("Original", format_time(duration))
+    print_field("Removed", f"{format_time(removed_duration)}  ·  {len(cuts)} range(s)")
+    print_field("Retained", f"{c(format_time(kept_duration), BOLD + GREEN)}  ·  {len(keep)} clip(s)")
 
     if not keep:
         die("The cut ranges remove the entire video; there is nothing left to export.")
@@ -432,8 +463,8 @@ def main():
         )
     )
 
-    print(f"{c('WORKSPACE', DIM)}")
-    print(f"  {work_dir}")
+    print_section("Workspace", DIM)
+    print_field("Temporary", work_dir)
 
     # All intermediate files and unpublished outputs stay inside this workspace.
     clips = []
@@ -446,12 +477,9 @@ def main():
         # Extract KEEP ranges directly from ORIGINAL source
         # ─────────────────────────────────────────────────────────────────────
 
-        print()
-        print(c("EXTRACTING KEEP RANGES", BOLD + GREEN))
-        print(
-            f"{DIM}"
-            "Each clip is extracted from the ORIGINAL source."
-            f"{RESET}"
+        print_stage(
+            1, 4, "Extracting clips",
+            "Every kept range is copied directly from the original source."
         )
 
         for index, (start, end) in enumerate(keep, 1):
@@ -512,6 +540,8 @@ def main():
         # Concatenate WITHOUT RE-ENCODING
         # ─────────────────────────────────────────────────────────────────────
 
+        print_stage(2, 4, "Assembling video", "Joining clips without re-encoding.")
+
         concat_command = [
             "ffmpeg",
             "-hide_banner",
@@ -542,25 +572,25 @@ def main():
         if "audio" not in output_streams:
             die("The temporary Pass A output contains no audio stream.")
 
-        print(f"\n{c('VIDEO VALIDATION', BOLD + CYAN)}")
-        print(f"  Duration : {format_time(output_duration)}")
-        print(f"  Size     : {format_size(pass_a_temp)}")
+        print_section("Video check")
+        print_field("Duration", format_time(output_duration))
+        print_field("File size", format_size(pass_a_temp))
         difference = abs(output_duration - kept_duration)
         if difference <= 2:
-            print(f"  Status   : {c('Duration looks correct', GREEN)}")
+            print_field("Status", c("✓ Duration matches the edit plan", GREEN))
         else:
-            print(f"  Status   : {c('Duration differs from expectation', YELLOW)}")
-            print(f"  Expected : {format_time(kept_duration)}")
+            print_field("Status", c("! Duration differs from expectation", YELLOW))
+            print_field("Expected", format_time(kept_duration))
 
         # Peak normalization only: no DC-offset or high-pass filter.
-        print(f"\n{c('AUDIO NORMALIZATION', BOLD + CYAN)}")
+        print_stage(3, 4, "Normalizing audio", "Peak normalization · FLAC compression level 8.")
         print("  Measuring sample peak...")
         peak_db = measure_peak_db(pass_a_temp)
         target_db = -1.0
         gain_db = target_db - peak_db
-        print(f"  Measured peak : {peak_db:.2f} dBFS")
-        print(f"  Target peak   : {target_db:.2f} dBFS")
-        print(f"  Applied gain  : {gain_db:+.2f} dB")
+        print_field("Measured peak", f"{peak_db:.2f} dBFS")
+        print_field("Target peak", f"{target_db:.2f} dBFS")
+        print_field("Gain", f"{gain_db:+.2f} dB")
 
         run_ffmpeg(
             [
@@ -588,18 +618,19 @@ def main():
                 "Existing output files have been preserved."
             )
 
-        print(f"  Verified peak : {verified_peak_db:.2f} dBFS")
-        print(f"  Audio duration: {format_time(audio_duration)}")
-        print(f"  FLAC size     : {format_size(audio_temp)}")
+        print_section("Audio check")
+        print_field("Verified peak", f"{verified_peak_db:.2f} dBFS")
+        print_field("Duration", format_time(audio_duration))
+        print_field("File size", format_size(audio_temp))
 
         # Publish only after both outputs have been generated and validated.
-        print(f"\n{c('PUBLISHING OUTPUTS', BOLD + GREEN)}")
+        print_stage(4, 4, "Publishing outputs", "Replacing deliverables with validated files.")
         pass_a_temp.replace(output)
         audio_temp.replace(audio_output)
-        print(f"  Video : {output} ({format_size(output)})")
-        print(f"  Audio : {audio_output} ({format_size(audio_output)})")
-        print(f"  Total elapsed: {format_elapsed(time.perf_counter() - started_at)}")
-        print(c("Done.", BOLD + GREEN))
+        print_field("Video", f"{output.name}  ·  {format_size(output)}")
+        print_field("Audio", f"{audio_output.name}  ·  {format_size(audio_output)}")
+        print_field("Elapsed", format_elapsed(time.perf_counter() - started_at))
+        print(f"\n  {c('✓ All done.', BOLD + GREEN)}")
 
     finally:
 
@@ -609,11 +640,7 @@ def main():
 
         shutil.rmtree(work_dir, ignore_errors=True)
 
-        print()
-        print(
-            f"{c('CLEANUP', DIM)} "
-            f"Temporary workspace removed."
-        )
+        print(f"  {c('✓', DIM)} Temporary workspace removed.")
 
 
 if __name__ == "__main__":
