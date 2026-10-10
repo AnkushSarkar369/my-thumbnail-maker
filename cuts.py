@@ -350,7 +350,7 @@ def main():
     if args.output:
         output = Path(args.output).expanduser().resolve()
     else:
-        output = video.with_name(f"Final{video.suffix}")
+        output = video.with_name("Final.mov")
 
     if output.exists():
         print(
