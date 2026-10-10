@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import argparse
 import re
 import shutil
 import subprocess
@@ -303,12 +302,6 @@ def run_ffmpeg(command, description):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Cut a video without re-encoding, then export normalized audio as FLAC."
-    )
-    parser.add_argument("--dry-run", action="store_true",
-                        help="validate the input and show the cut plan without creating output files")
-    args = parser.parse_args()
     started_at = time.perf_counter()
     check_dependency("ffmpeg")
     check_dependency("ffprobe")
@@ -362,7 +355,7 @@ def main():
     if "audio" not in source_streams:
         die("The selected source has no audio stream; an audio FLAC cannot be created.")
     print(f"  Duration: {c(format_time(duration), BOLD)}")
-    print(f"  Streams : {', '.join(sorted(source_streams))}')
+    print(f"  Streams : {', '.join(sorted(source_streams))}")
 
     # ─────────────────────────────────────────────────────────────────────────
     # Read DELETE ranges
@@ -398,16 +391,6 @@ def main():
 
     if not keep:
         die("The cut ranges remove the entire video; there is nothing left to export.")
-    if args.dry_run:
-        print(c("DRY RUN", BOLD + CYAN))
-        print("  Input checks passed. No files were created or overwritten.")
-        print(f"  Video output : {video.with_name('Pass A.mov')}")
-        print(f"  Audio output : {video.with_name('To Clean.flac')}")
-        print(f"  Kept clips   : {len(keep)}")
-        print("  Audio target : -1.00 dBFS sample peak")
-        print(f"  Elapsed      : {format_elapsed(time.perf_counter() - started_at)}")
-        return
-
     # ─────────────────────────────────────────────────────────────────────────
     # Output path
     # ─────────────────────────────────────────────────────────────────────────
@@ -473,7 +456,11 @@ def main():
 
         for index, (start, end) in enumerate(keep, 1):
 
-            clip = work_dir / f"clip_{index:03d}{video.suffix}"
+            start_label = format_time(start).replace(":", "").zfill(6)
+            end_label = format_time(end).replace(":", "").zfill(6)
+            clip = work_dir / (
+                f"segment_{index:03d}_{start_label}-{end_label}{video.suffix}"
+            )
 
             clip_duration = end - start
 
