@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import argparse
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 
@@ -25,6 +28,22 @@ MAGENTA = "\033[35m"
 
 def c(text, colour):
     return f"{colour}{text}{RESET}"
+
+
+def format_elapsed(seconds):
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes, seconds = divmod(seconds, 60)
+    return f"{int(minutes)}m {seconds:.0f}s"
+
+
+def format_size(path):
+    size = path.stat().st_size
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size < 1024 or unit == "TB":
+            return f"{size:.1f} {unit}" if unit != "B" else f"{size} B"
+        size /= 1024
+    return f"{size:.1f} TB"
 
 
 def die(message):
@@ -57,6 +76,9 @@ def parse_time(value):
     try:
         parts = [int(x) for x in value.split(":")]
     except ValueError:
+        raise ValueError(f"Invalid timestamp: {value}")
+
+    if any(part < 0 for part in parts):
         raise ValueError(f"Invalid timestamp: {value}")
 
     if len(parts) == 1:
@@ -114,6 +136,37 @@ def get_duration(video):
         return float(result.stdout.strip())
     except ValueError:
         die(f"Could not determine duration of:\n{video}")
+
+
+def get_stream_types(media_path):
+    """Return the set of stream types reported by ffprobe."""
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type",
+         "-of", "csv=p=0", str(media_path)],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        die(f"Could not inspect media streams:\n{media_path}")
+    return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+def measure_peak_db(media_path):
+    """Measure decoded sample peak in dBFS using FFmpeg volumedetect."""
+    result = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-nostats", "-i", str(media_path),
+         "-map", "0:a:0", "-vn", "-af", "volumedetect", "-f", "null", "-"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        detail = result.stderr[-2000:].strip()
+        die(f"Could not analyze audio in {media_path.name}.\n{detail}")
+    peak_match = re.search(r"max_volume:\s*(-?inf|-?[0-9.]+) dB", result.stderr)
+    if not peak_match:
+        die(f"FFmpeg could not determine the audio peak in {media_path.name}.")
+    peak_text = peak_match.group(1)
+    if peak_text == "-inf":
+        die(f"The audio in {media_path.name} is silent; normalization is impossible.")
+    return float(peak_text)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -235,14 +288,14 @@ def print_ranges(title, ranges, colour):
 
 def run_ffmpeg(command, description):
     print(f"\n{c('▶', CYAN)} {description}")
-
+    started_at = time.perf_counter()
     process = subprocess.run(command)
-
     if process.returncode != 0:
         die(
             f"FFmpeg failed while {description.lower()}.\n"
             f"Nothing was done to the original source."
         )
+    print(f"  {DIM}Completed in {format_elapsed(time.perf_counter() - started_at)}{RESET}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -250,7 +303,13 @@ def run_ffmpeg(command, description):
 # ─────────────────────────────────────────────────────────────────────────────
 
 def main():
-
+    parser = argparse.ArgumentParser(
+        description="Cut a video without re-encoding, then export normalized audio as FLAC."
+    )
+    parser.add_argument("--dry-run", action="store_true",
+                        help="validate the input and show the cut plan without creating output files")
+    args = parser.parse_args()
+    started_at = time.perf_counter()
     check_dependency("ffmpeg")
     check_dependency("ffprobe")
 
@@ -269,10 +328,10 @@ def main():
     ]
 
     if len(candidates) != 1:
-        names = "\\n".join(f"  {path.name}" for path in candidates) or "  (none)"
+        names = "\n".join(f"  {path.name}" for path in candidates) or "  (none)"
         die(
             "Expected exactly one source video beside cuts.py. Found "
-            f"{len(candidates)}:\\n{names}"
+            f"{len(candidates)}:\n{names}"
         )
 
     video = candidates[0].resolve()
@@ -297,8 +356,13 @@ def main():
     print(f"  {video}")
 
     duration = get_duration(video)
-
+    source_streams = get_stream_types(video)
+    if "video" not in source_streams:
+        die("The selected source does not contain a video stream.")
+    if "audio" not in source_streams:
+        die("The selected source has no audio stream; an audio FLAC cannot be created.")
     print(f"  Duration: {c(format_time(duration), BOLD)}")
+    print(f"  Streams : {', '.join(sorted(source_streams))}')
 
     # ─────────────────────────────────────────────────────────────────────────
     # Read DELETE ranges
@@ -332,6 +396,18 @@ def main():
     print(f"  Final    : {c(format_time(kept_duration), BOLD + GREEN)}")
     print()
 
+    if not keep:
+        die("The cut ranges remove the entire video; there is nothing left to export.")
+    if args.dry_run:
+        print(c("DRY RUN", BOLD + CYAN))
+        print("  Input checks passed. No files were created or overwritten.")
+        print(f"  Video output : {video.with_name('Pass A.mov')}")
+        print(f"  Audio output : {video.with_name('To Clean.flac')}")
+        print(f"  Kept clips   : {len(keep)}")
+        print("  Audio target : -1.00 dBFS sample peak")
+        print(f"  Elapsed      : {format_elapsed(time.perf_counter() - started_at)}")
+        return
+
     # ─────────────────────────────────────────────────────────────────────────
     # Output path
     # ─────────────────────────────────────────────────────────────────────────
@@ -342,7 +418,7 @@ def main():
     for existing_output in (output, audio_output):
         if existing_output.exists():
             print(
-                f"{c('WARNING', YELLOW)} Output already exists:\\n"
+                f"{c('WARNING', YELLOW)} Output already exists:\n"
                 f"  {existing_output}"
             )
 
@@ -352,7 +428,7 @@ def main():
                 print("Cancelled.")
                 sys.exit(0)
 
-            existing_output.unlink()
+            # Existing files remain in place until validated replacements are ready.
 
     # ─────────────────────────────────────────────────────────────────────────
     # Temporary workspace
@@ -376,7 +452,10 @@ def main():
     print(f"{c('WORKSPACE', DIM)}")
     print(f"  {work_dir}")
 
+    # All intermediate files and unpublished outputs stay inside this workspace.
     clips = []
+    pass_a_temp = work_dir / "pass_a_video.mov"
+    audio_temp = work_dir / "normalized_audio.flac"
 
     try:
 
@@ -433,7 +512,7 @@ def main():
         # Build concat manifest
         # ─────────────────────────────────────────────────────────────────────
 
-        concat_file = work_dir / "concat.txt"
+        concat_file = work_dir / "concat_manifest.txt"
 
         with open(concat_file, "w", encoding="utf-8") as f:
             for clip in clips:
@@ -459,7 +538,7 @@ def main():
             "-c", "copy",
 
             "-y",
-            str(output),
+            str(pass_a_temp),
         ]
 
         run_ffmpeg(
@@ -468,111 +547,72 @@ def main():
         )
 
         # ─────────────────────────────────────────────────────────────────────
-        # Verify output
-        # ─────────────────────────────────────────────────────────────────────
+        # Validate temporary video output before publishing it.
+        output_duration = get_duration(pass_a_temp)
+        output_streams = get_stream_types(pass_a_temp)
+        if "video" not in output_streams:
+            die("The temporary Pass A output contains no video stream.")
+        if "audio" not in output_streams:
+            die("The temporary Pass A output contains no audio stream.")
 
-        output_duration = get_duration(output)
-
-        print()
-        print(c("=" * 64, GREEN))
-        print(c(" COMPLETE ", BOLD + GREEN))
-        print(c("=" * 64, GREEN))
-
-        print(f"\n  Output   : {output}")
+        print(f"\n{c('VIDEO VALIDATION', BOLD + CYAN)}")
         print(f"  Duration : {format_time(output_duration)}")
-
+        print(f"  Size     : {format_size(pass_a_temp)}")
         difference = abs(output_duration - kept_duration)
-
         if difference <= 2:
-            print(
-                f"  Status   : {c('✓ Duration looks correct', GREEN)}"
-            )
+            print(f"  Status   : {c('Duration looks correct', GREEN)}")
         else:
-            print(
-                f"  Status   : {c('⚠ Duration differs from expectation', YELLOW)}"
-            )
-            print(
-                f"  Expected : {format_time(kept_duration)}"
-            )
+            print(f"  Status   : {c('Duration differs from expectation', YELLOW)}")
+            print(f"  Expected : {format_time(kept_duration)}")
 
-        # ─────────────────────────────────────────────────────────────────────
-        # Normalize audio from Pass A.mov, then encode as lossless FLAC
-        # ─────────────────────────────────────────────────────────────────────
-        #
-        # First pass measures peak level after a 1 Hz high-pass filter, which
-        # removes DC offset. Second pass applies the gain needed for a -1 dBFS
-        # peak and writes FLAC. The video pipeline above remains unchanged.
-        # ─────────────────────────────────────────────────────────────────────
-
+        # Peak normalization only: no DC-offset or high-pass filter.
         print(f"\n{c('AUDIO NORMALIZATION', BOLD + CYAN)}")
-        print("  Measuring peak and removing DC offset...")
-
-        analysis = subprocess.run(
-            [
-                "ffmpeg",
-                "-hide_banner",
-                "-nostats",
-                "-i", str(output),
-                "-map", "0:a:0",
-                "-vn",
-                "-af", "highpass=f=1,volumedetect",
-                "-f", "null",
-                "-",
-            ],
-            capture_output=True,
-            text=True,
-        )
-
-        if analysis.returncode != 0:
-            die(
-                "Could not analyze audio in Pass A.mov.\n"
-                f"{analysis.stderr[-2000:]}"
-            )
-
-        import re
-
-        peak_match = re.search(
-            r"max_volume:\s*(-?inf|-?[0-9.]+) dB",
-            analysis.stderr,
-        )
-
-        if not peak_match:
-            die("FFmpeg could not determine the audio peak.")
-
-        peak_text = peak_match.group(1)
-
-        if peak_text == "-inf":
-            die("The audio in Pass A.mov is silent; normalization is impossible.")
-
-        peak_db = float(peak_text)
+        print("  Measuring sample peak...")
+        peak_db = measure_peak_db(pass_a_temp)
         target_db = -1.0
         gain_db = target_db - peak_db
-
         print(f"  Measured peak : {peak_db:.2f} dBFS")
         print(f"  Target peak   : {target_db:.2f} dBFS")
         print(f"  Applied gain  : {gain_db:+.2f} dB")
 
         run_ffmpeg(
             [
-                "ffmpeg",
-                "-hide_banner",
-                "-loglevel", "warning",
-                "-i", str(output),
-                "-map", "0:a:0",
-                "-vn",
-                "-af", f"highpass=f=1,volume={gain_db:.8f}dB",
-                "-c:a", "flac",
-                "-compression_level", "8",
-                "-y",
-                str(audio_output),
+                "ffmpeg", "-hide_banner", "-loglevel", "warning",
+                "-i", str(pass_a_temp), "-map", "0:a:0", "-vn",
+                "-af", f"volume={gain_db:.8f}dB",
+                "-c:a", "flac", "-compression_level", "8",
+                "-y", str(audio_temp),
             ],
             "Normalizing audio and creating lossless FLAC"
         )
 
-        audio_duration = get_duration(audio_output)
+        # Validate the FLAC before replacing any existing deliverables.
+        audio_streams = get_stream_types(audio_temp)
+        if "audio" not in audio_streams:
+            die("The generated FLAC contains no audio stream.")
+        audio_duration = get_duration(audio_temp)
+        if audio_duration <= 0:
+            die("The generated FLAC has an invalid duration.")
+        verified_peak_db = measure_peak_db(audio_temp)
+        if abs(verified_peak_db - target_db) > 0.10:
+            die(
+                "The normalized FLAC failed peak validation. "
+                f"Expected about {target_db:.2f} dBFS; got {verified_peak_db:.2f} dBFS. "
+                "Existing output files have been preserved."
+            )
 
-        print(f"  Audio    : {audio_output}")
+        print(f"  Verified peak : {verified_peak_db:.2f} dBFS")
         print(f"  Audio duration: {format_time(audio_duration)}")
+        print(f"  FLAC size     : {format_size(audio_temp)}")
+
+        # Publish only after both outputs have been generated and validated.
+        print(f"\n{c('PUBLISHING OUTPUTS', BOLD + GREEN)}")
+        pass_a_temp.replace(output)
+        audio_temp.replace(audio_output)
+        print(f"  Video : {output} ({format_size(output)})")
+        print(f"  Audio : {audio_output} ({format_size(audio_output)})")
+        print(f"  Total elapsed: {format_elapsed(time.perf_counter() - started_at)}")
+        print(c("Done.", BOLD + GREEN))
 
     finally:
 
