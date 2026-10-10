@@ -625,7 +625,7 @@ def main():
         print()
         print(
             f"{c('CLEANUP', DIM)} "
-            f"Temporary clips removed."
+            f"Temporary workspace removed."
         )
 
 
