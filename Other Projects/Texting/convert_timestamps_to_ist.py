@@ -129,6 +129,13 @@ def convert_file(path: Path, dry_run: bool) -> bool:
         )
         return True
 
+    if converted == 0:
+        print(
+            f"{path.name}: no timestamp changes needed; already IST {already_ist:,}; "
+            f"timezone-ambiguous {ambiguous:,}; skipped {skipped:,}; file left untouched"
+        )
+        return True
+
     try:
         # Keep the first pristine backup. Never overwrite it on repeated runs.
         if not backup.exists():
