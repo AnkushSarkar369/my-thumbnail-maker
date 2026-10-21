@@ -59,7 +59,7 @@ WORD_PATTERN = re.compile(r"\b[\w]+(?:['’][\w]+)*\b", flags=re.UNICODE)
 
 # Only calls matching Gargee's contact name or an explicitly configured phone
 # number are included. Add any alternate saved contact names here if needed.
-CALL_CONTACT_ALIASES = {"gargee", "gargee basak"}
+CALL_CONTACT_ALIASES = {"gargee", "gargee basak", "pendulum"}
 # Optional: digits-only phone numbers for Gargee, including country code.
 # Leave empty if the XML reliably provides her contact_name.
 CALL_PHONE_NUMBERS: set[str] = set()
