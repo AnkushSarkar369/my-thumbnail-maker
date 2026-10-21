@@ -21,7 +21,7 @@ import json
 import re
 import sys
 import xml.etree.ElementTree as ET
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -66,18 +66,7 @@ CALL_CONTACT_ALIASES = {"gargee", "gargee basak", "pendulum"}
 # Leave empty if the XML reliably provides her contact_name.
 CALL_PHONE_NUMBERS: set[str] = set()
 
-CALL_TYPES = {
-    "1": "Incoming",
-    "2": "Outgoing",
-    "3": "Missed",
-    "4": "Voicemail",
-    "5": "Rejected",
-    "6": "Blocked",
-    "7": "Answered externally",
-}
-# Duration is treated as meaningful only for call types normally connected
-# to an answered call. The raw duration is still retained for every record.
-DURATION_CALL_TYPES = {"1", "2", "7"}
+KNOWN_CALL_TYPES = {"1", "2", "3", "4", "5", "6", "7"}
 
 
 def canonical_name(name: object) -> str:
@@ -280,7 +269,7 @@ def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
             duration = 0
 
         name = "Gargee Basak"
-        if raw_type not in CALL_TYPES:
+        if raw_type not in KNOWN_CALL_TYPES:
             warnings.append(f"{path.name} call record {index}: unknown call type code {raw_type!r}.")
 
         events.append({
@@ -318,13 +307,11 @@ def main() -> int:
     warnings: list[str] = []
     events: list[dict] = []
     json_events: list[dict] = []
-    source_counts = {}
 
     for source, path in JSON_FILES.items():
         loaded = read_json_events(path, source, warnings)
         events.extend(loaded)
         json_events.extend(loaded)
-        source_counts[source] = len(loaded)
 
     calls_path = CALLS_FILE if CALLS_FILE.exists() else None
     if calls_path is None:
@@ -343,7 +330,6 @@ def main() -> int:
         read_call_events(calls_path, warnings) if calls_path else ([], 0)
     )
     events.extend(call_events)
-    source_counts["Calls (Gargee only)"] = len(call_events)
 
     if not events:
         print("REALITY.PY — no valid timestamped records were loaded.")
