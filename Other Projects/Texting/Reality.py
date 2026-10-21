@@ -426,7 +426,6 @@ def main() -> int:
         print(f"  {event_type:<38} {count:>12,}")
     print(f"System events (reported separately)      {len(system_events):>12,}")
     print(f"Calls with Gargee                         {len(call_events):>12,}")
-    print(f"Other phone calls excluded                {excluded_call_records:>12,}")
     print(f"All included timestamped records           {len(events):>12,}")
     print(f"First recorded event                     {display_timestamp(events[0]['timestamp'])}")
     print(f"Last recorded event                      {display_timestamp(events[-1]['timestamp'])}")
@@ -499,7 +498,6 @@ def main() -> int:
     print(f"Records with unknown timezone              {naive_count:>12,}")
     print(f"Unknown call type records                  {unknown_call_types:>12,}")
     print(f"Validation warnings                        {len(warnings):>12,}")
-    print(f"Phone-log calls excluded (not matched to Gargee) {excluded_call_records:>8,}")
     print("Source files were read only; no records were deleted or rewritten.")
 
     if warnings:
