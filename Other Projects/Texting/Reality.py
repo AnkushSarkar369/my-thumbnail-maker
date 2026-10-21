@@ -133,8 +133,7 @@ def parse_timestamp(value: object) -> datetime | None:
 def chronological_key(dt: datetime) -> float:
     """
     Use absolute instants for aware timestamps. Naive timestamps have no
-    known timezone; UTC is used only as a deterministic sorting fallback and
-    the report warns that such timestamps are timezone-ambiguous.
+    known timezone; UTC is used only as a deterministic sorting fallback.
     """
     if dt.tzinfo is None or dt.utcoffset() is None:
         return dt.replace(tzinfo=timezone.utc).timestamp()
@@ -145,6 +144,19 @@ def display_timestamp(dt: datetime) -> str:
     if dt.tzinfo is None or dt.utcoffset() is None:
         return dt.strftime("%d %b %Y, %H:%M:%S") + " (timezone unknown)"
     return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y, %H:%M:%S IST")
+
+
+def display_timestamp_plain(dt: datetime) -> str:
+    """Format in IST without repeating the zone on compact range lines."""
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        return dt.strftime("%d %b %Y, %H:%M:%S")
+    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y, %H:%M:%S")
+
+
+def display_date(dt: datetime) -> str:
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        return dt.strftime("%d %b %Y")
+    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y")
 
 
 def fmt_duration(seconds: float) -> str:
@@ -268,7 +280,8 @@ def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
             duration = 0
 
         name = "Gargee Basak"
-        call_type = CALL_TYPES.get(raw_type, f"Unknown type ({raw_type})")
+        if raw_type not in CALL_TYPES:
+            warnings.append(f"{path.name} call record {index}: unknown call type code {raw_type!r}.")
 
         events.append({
             "timestamp": timestamp,
@@ -279,10 +292,8 @@ def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
             "source": "Calls",
             "record_index": index,
             "is_system": False,
-            "call_type": call_type,
             "call_type_code": raw_type,
             "duration": duration,
-            "duration_meaningful": raw_type in DURATION_CALL_TYPES,
             "number": number,
         })
     return events, excluded
@@ -339,7 +350,7 @@ def main() -> int:
         print("\nCheck that I_Simple.json, W_Old.json, W_New.json, and calls.xml are")
         print("in the same directory as Reality.py.")
         for warning in warnings:
-            print(f"WARNING: {warning}")
+            print(f"Reality.py: {warning}", file=sys.stderr)
         return 1
 
     events.sort(key=lambda event: chronological_key(event["timestamp"]))
@@ -351,6 +362,12 @@ def main() -> int:
         and event["message"].strip()
     ]
     system_events = [event for event in json_events if event["is_system"]]
+    empty_text_entries = [
+        event for event in json_events
+        if event["type"].casefold() == "text"
+        and not event["is_system"]
+        and not event["message"].strip()
+    ]
     other_events = [
         event for event in json_events
         if event["type"].casefold() != "text" and not event["is_system"]
@@ -378,17 +395,10 @@ def main() -> int:
         stats["by_source"][event["source"]] += 1
 
     event_type_counts = Counter(event["type"] for event in other_events)
-    source_text_counts = Counter(event["source"] for event in text_events)
     duplicate_groups, duplicate_extras = exact_duplicate_stats(json_events)
 
-    call_type_counts = Counter(event["call_type"] for event in call_events)
-    meaningful_calls = [event for event in call_events if event["duration_meaningful"]]
-    total_recorded_duration = sum(event["duration"] for event in meaningful_calls)
-    duration_by_type = Counter()
-    for event in meaningful_calls:
-        duration_by_type[event["call_type"]] += event["duration"]
-
-    longest_call = max(meaningful_calls, key=lambda event: event["duration"], default=None)
+    total_recorded_duration = sum(event["duration"] for event in call_events)
+    longest_call = max(call_events, key=lambda event: event["duration"], default=None)
     first_call = min(call_events, key=lambda event: chronological_key(event["timestamp"]), default=None)
     last_call = max(call_events, key=lambda event: chronological_key(event["timestamp"]), default=None)
 
@@ -402,116 +412,135 @@ def main() -> int:
             gaps.append((seconds, previous, following))
     top_gaps = sorted(gaps, key=lambda item: item[0], reverse=True)[:5]
 
-    naive_count = sum(
-        1 for event in events
-        if event["timestamp"].tzinfo is None or event["timestamp"].utcoffset() is None
+    sep = "═" * 70
+    line = "─" * 70
+    first_event = events[0]
+    last_event = events[-1]
+
+    print(sep)
+    print("                              REALITY")
+    print("                    Unified Conversation Archive")
+    print(
+        f"        {display_date(first_event['timestamp'])} — "
+        f"{display_date(last_event['timestamp'])} · All times IST"
     )
-    known_types = set(CALL_TYPES)
-    unknown_call_types = sum(1 for event in call_events if event["call_type_code"] not in known_types)
-
-    sep = "═" * 66
-    line = "─" * 66
-    print(sep)
-    print("                         REALITY.PY")
-    print("               Unified Chat Archive Statistics")
     print(sep)
 
-    print("\nARCHIVE OVERVIEW")
+    print("\nOVERVIEW")
     print(line)
-    print(f"Text messages (combined)                 {len(text_events):>12,}")
+    print(f"{'Text messages':<42}{len(text_events):>12,}")
     for participant in sorted(participant_stats):
-        print(f"  {participant:<38} {participant_stats[participant]['messages']:>12,}")
-    print(f"Other chat events                        {len(other_events):>12,}")
-    for event_type, count in sorted(event_type_counts.items(), key=lambda item: (-item[1], item[0])):
-        print(f"  {event_type:<38} {count:>12,}")
-    print(f"System events (reported separately)      {len(system_events):>12,}")
-    print(f"Calls with Gargee                         {len(call_events):>12,}")
-    print(f"All included timestamped records           {len(events):>12,}")
-    print(f"First recorded event                     {display_timestamp(events[0]['timestamp'])}")
-    print(f"Last recorded event                      {display_timestamp(events[-1]['timestamp'])}")
-
-    print("\nPARTICIPANT TEXT STATISTICS")
+        print(
+            f"  {participant:<40}"
+            f"{participant_stats[participant]['messages']:>12,}"
+        )
+    print(f"{'Other chat events':<42}{len(other_events):>12,}")
+    print(f"{'Empty text entries':<42}{len(empty_text_entries):>12,}")
+    print(f"{'System events':<42}{len(system_events):>12,}")
+    print(f"{'Calls with Gargee':<42}{len(call_events):>12,}")
     print(line)
-    print(f"{'Participant':<22} {'Messages':>10} {'Words':>12} {'Characters':>13} {'Emojis':>9}")
+    print(f"{'Total recorded events':<42}{len(events):>12,}")
+    print()
+    print(f"{'First recorded event':<30}{display_timestamp(first_event['timestamp'])}")
+    print(f"{'Last recorded event':<30}{display_timestamp(last_event['timestamp'])}")
+
+    print("\nMESSAGE STATISTICS")
+    print(line)
+    participant_header = (
+        f"{'Participant':<22} {'Messages':>10} {'Words':>12} "
+        f"{'Characters':>13} {'Emojis':>9}"
+    )
+    print(participant_header)
+    print("─" * len(participant_header))
+    totals = {"messages": 0, "words": 0, "characters": 0, "emojis": 0}
     for participant in sorted(participant_stats):
         stats = participant_stats[participant]
         print(
             f"{participant[:22]:<22} {stats['messages']:>10,} "
-            f"{stats['words']:>12,} {stats['characters']:>13,} {stats['emojis']:>9,}"
+            f"{stats['words']:>12,} {stats['characters']:>13,} "
+            f"{stats['emojis']:>9,}"
         )
-    print("\nText messages by source:")
+        for key in totals:
+            totals[key] += stats[key]
+    print("─" * len(participant_header))
+    print(
+        f"{'TOTAL':<22} {totals['messages']:>10,} "
+        f"{totals['words']:>12,} {totals['characters']:>13,} "
+        f"{totals['emojis']:>9,}"
+    )
+
+    print("\nMESSAGES BY PLATFORM")
+    print(line)
+    platform_header = (
+        f"{'Participant':<22} {'Instagram':>12} {'WhatsApp Old':>15} "
+        f"{'WhatsApp New':>15} {'Total':>10}"
+    )
+    print(platform_header)
+    print("─" * len(platform_header))
+    platform_totals = {source: 0 for source in JSON_FILES}
     for participant in sorted(participant_stats):
         by_source = participant_stats[participant]["by_source"]
-        details = ", ".join(f"{source}: {by_source[source]:,}" for source in JSON_FILES)
-        print(f"  {participant}: {details}")
-
-    print("\nCALL STATISTICS")
-    print(line)
-    print(f"Total recorded calls                       {len(call_events):>12,}")
-    for call_type in CALL_TYPES.values():
-        count = call_type_counts[call_type]
-        if count:
-            print(f"  {call_type:<38} {count:>12,}")
-    for call_type, count in sorted(call_type_counts.items()):
-        if call_type not in CALL_TYPES.values():
-            print(f"  {call_type:<38} {count:>12,}")
-    print(f"Total recorded duration (meaningful types) {fmt_duration(total_recorded_duration):>12}")
-    print("Duration by call type:")
-    for call_type, seconds in sorted(duration_by_type.items()):
-        print(f"  {call_type:<38} {fmt_duration(seconds):>12}")
-    print(f"Calls with meaningful duration             {len(meaningful_calls):>12,}")
-    print(f"Calls excluded from duration total         {len(call_events) - len(meaningful_calls):>12,}")
-    if longest_call:
+        counts = [by_source[source] for source in JSON_FILES]
+        for source, count in zip(JSON_FILES, counts):
+            platform_totals[source] += count
         print(
-            f"Longest call with meaningful duration     {fmt_duration(longest_call['duration'])} "
-            f"({longest_call['sender']}, {display_timestamp(longest_call['timestamp'])})"
+            f"{participant[:22]:<22} {counts[0]:>12,} {counts[1]:>15,} "
+            f"{counts[2]:>15,} {sum(counts):>10,}"
         )
-    if first_call:
-        print(f"Earliest recorded call                     {display_timestamp(first_call['timestamp'])}")
-    if last_call:
-        print(f"Latest recorded call                       {display_timestamp(last_call['timestamp'])}")
-    print("Duration total excludes call types not normally representing an answered call.")
-    print("Raw XML duration values are retained in memory but are not summed for excluded types.")
+    print("─" * len(platform_header))
+    print(
+        f"{'TOTAL':<22} {platform_totals['Instagram']:>12,} "
+        f"{platform_totals['WhatsApp (old)']:>15,} "
+        f"{platform_totals['WhatsApp (new)']:>15,} "
+        f"{sum(platform_totals.values()):>10,}"
+    )
 
-    print("\nCHRONOLOGY — FIVE LONGEST INTER-EVENT GAPS")
+    print("\nOTHER CHAT EVENTS")
+    print(line)
+    event_header = f"{'Event type':<44}{'Count':>12}"
+    print(event_header)
+    print("─" * len(event_header))
+    for event_type, count in sorted(event_type_counts.items(), key=lambda item: (-item[1], item[0])):
+        print(f"{event_type:<44}{count:>12,}")
+    print("─" * len(event_header))
+    print(f"{'TOTAL':<44}{len(other_events):>12,}")
+
+    print("\nCALLS")
+    print(line)
+    print(f"{'Total calls':<42}{len(call_events):>12,}")
+    print(f"{'Total call duration':<42}{fmt_duration(total_recorded_duration):>12}")
+    if longest_call:
+        print(f"{'Longest call':<42}{fmt_duration(longest_call['duration']):>12}")
+        print(f"{'Date of longest call':<30}{display_timestamp(longest_call['timestamp'])}")
+    if first_call and last_call:
+        first_call_date = display_date(first_call["timestamp"])
+        last_call_date = display_date(last_call["timestamp"])
+        print(f"{'Recorded call date range':<30}{first_call_date} — {last_call_date}")
+
+    print("\nLONGEST GAPS BETWEEN RECORDED EVENTS")
     print(line)
     if not top_gaps:
         print("Not enough timestamped events to calculate gaps.")
     else:
         for rank, (seconds, previous, following) in enumerate(top_gaps, start=1):
-            print(f"{rank}. {fmt_duration(seconds)}")
-            print(
-                f"   Previous: {previous['sender']} — {previous['source']} "
-                f"[{previous['type']}]"
-            )
-            print(f"             {display_timestamp(previous['timestamp'])}")
-            print(
-                f"   Next:     {following['sender']} — {following['source']} "
-                f"[{following['type']}]"
-            )
-            print(f"             {display_timestamp(following['timestamp'])}")
+            start = display_timestamp_plain(previous["timestamp"])
+            end = display_timestamp_plain(following["timestamp"])
+            print(f"{rank}. {fmt_duration(seconds):<17} [{start} — {end} IST]")
 
-    print("\nDATA QUALITY")
+    print("\nARCHIVE INTEGRITY")
     print(line)
-    print(f"Exact duplicate groups (JSON records)      {duplicate_groups:>12,}")
-    print(f"Extra occurrences in those groups          {duplicate_extras:>12,}")
-    print(f"Records with unknown timezone              {naive_count:>12,}")
-    print(f"Unknown call type records                  {unknown_call_types:>12,}")
-    print(f"Validation warnings                        {len(warnings):>12,}")
-    print("Source files were read only; no records were deleted or rewritten.")
+    print(f"{'Exact duplicate groups':<42}{duplicate_groups:>12,}")
+    print(f"{'Extra occurrences in duplicate groups':<42}{duplicate_extras:>12,}")
+    print()
+    print("Original archive files remain unchanged.")
 
-    if warnings:
-        print("\nWARNINGS")
-        print(line)
-        # Keep terminal output useful even if an archive has many malformed rows.
-        for warning in warnings[:50]:
-            print(f"- {warning}")
-        if len(warnings) > 50:
-            print(f"- ... and {len(warnings) - 50:,} more warning(s).")
-
-    print("\n" + sep)
-    print("Report complete.")
     print(sep)
+    if warnings:
+        print("\nReality.py validation notes (stderr; not part of the report):", file=sys.stderr)
+        for warning in warnings[:50]:
+            print(f"- {warning}", file=sys.stderr)
+        if len(warnings) > 50:
+            print(f"- ... and {len(warnings) - 50:,} more note(s).", file=sys.stderr)
     return 0
 
 
