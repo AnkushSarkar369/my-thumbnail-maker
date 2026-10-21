@@ -213,7 +213,7 @@ def read_json_events(path: Path, source: str, warnings: list[str]) -> list[dict]
 
 
 def normalize_phone(value: str) -> str:
-    return re.sub(r"\\D", "", value or "")
+    return re.sub(r"\D", "", value or "")
 
 
 def normalize_contact(value: str) -> str:
