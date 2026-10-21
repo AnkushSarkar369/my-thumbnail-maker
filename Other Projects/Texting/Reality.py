@@ -24,9 +24,11 @@ import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 BASE_DIR = Path(__file__).resolve().parent
+DISPLAY_TIMEZONE = ZoneInfo("Asia/Kolkata")
 JSON_FILES = {
     "Instagram": BASE_DIR / "I_Simple.json",
     "WhatsApp (old)": BASE_DIR / "W_Old.json",
@@ -140,8 +142,9 @@ def chronological_key(dt: datetime) -> float:
 
 
 def display_timestamp(dt: datetime) -> str:
-    suffix = " (timezone unknown)" if dt.tzinfo is None or dt.utcoffset() is None else ""
-    return dt.strftime("%d %b %Y, %H:%M:%S %z").rstrip() + suffix
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        return dt.strftime("%d %b %Y, %H:%M:%S") + " (timezone unknown)"
+    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y, %H:%M:%S IST")
 
 
 def fmt_duration(seconds: float) -> str:
@@ -427,10 +430,6 @@ def main() -> int:
     print(f"All included timestamped records           {len(events):>12,}")
     print(f"First recorded event                     {display_timestamp(events[0]['timestamp'])}")
     print(f"Last recorded event                      {display_timestamp(events[-1]['timestamp'])}")
-    print("\nRecords loaded by source:")
-    for source in JSON_FILES:
-        print(f"  {source:<38} {source_counts.get(source, 0):>12,}")
-    print(f"  {'Calls with Gargee':<38} {source_counts.get('Calls (Gargee only)', 0):>12,}")
 
     print("\nPARTICIPANT TEXT STATISTICS")
     print(line)
@@ -451,7 +450,9 @@ def main() -> int:
     print(line)
     print(f"Total recorded calls                       {len(call_events):>12,}")
     for call_type in CALL_TYPES.values():
-        print(f"  {call_type:<38} {call_type_counts[call_type]:>12,}")
+        count = call_type_counts[call_type]
+        if count:
+            print(f"  {call_type:<38} {count:>12,}")
     for call_type, count in sorted(call_type_counts.items()):
         if call_type not in CALL_TYPES.values():
             print(f"  {call_type:<38} {count:>12,}")
