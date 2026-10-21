@@ -286,7 +286,20 @@ def main() -> int:
         json_events.extend(loaded)
         source_counts[source] = len(loaded)
 
-    call_events = read_call_events(CALLS_FILE, warnings)
+    calls_path = CALLS_FILE if CALLS_FILE.exists() else None
+    if calls_path is None:
+        xml_candidates = sorted(BASE_DIR.glob("*.xml"))
+        if len(xml_candidates) == 1:
+            calls_path = xml_candidates[0]
+        elif len(xml_candidates) > 1:
+            warnings.append(
+                "calls.xml was not found and multiple XML files exist; "
+                "rename the consolidated call archive to calls.xml."
+            )
+        else:
+            warnings.append("Missing calls.xml (no XML file found in the script directory).")
+
+    call_events = read_call_events(calls_path, warnings) if calls_path else []
     events.extend(call_events)
     source_counts["Calls"] = len(call_events)
 
