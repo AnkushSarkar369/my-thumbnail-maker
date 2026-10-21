@@ -57,6 +57,13 @@ EMOJI_PATTERN = re.compile(
 )
 WORD_PATTERN = re.compile(r"\b[\w]+(?:['’][\w]+)*\b", flags=re.UNICODE)
 
+# Only calls matching Gargee's contact name or an explicitly configured phone
+# number are included. Add any alternate saved contact names here if needed.
+CALL_CONTACT_ALIASES = {"gargee", "gargee basak"}
+# Optional: digits-only phone numbers for Gargee, including country code.
+# Leave empty if the XML reliably provides her contact_name.
+CALL_PHONE_NUMBERS: set[str] = set()
+
 CALL_TYPES = {
     "1": "Incoming",
     "2": "Outgoing",
@@ -205,18 +212,39 @@ def read_json_events(path: Path, source: str, warnings: list[str]) -> list[dict]
     return events
 
 
-def read_call_events(path: Path, warnings: list[str]) -> list[dict]:
+def normalize_phone(value: str) -> str:
+    return re.sub(r"\\D", "", value or "")
+
+
+def normalize_contact(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (value or "").casefold())
+
+
+def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
     events = []
+    excluded = 0
     try:
         root = ET.parse(path).getroot()
     except FileNotFoundError:
         warnings.append(f"Missing input file: {path.name}")
-        return events
+        return events, excluded
     except (ET.ParseError, OSError) as exc:
         warnings.append(f"Could not read {path.name}: {exc}")
-        return events
+        return events, excluded
 
     for index, call in enumerate(root.findall("call"), start=1):
+        contact = (call.attrib.get("contact_name") or "").strip()
+        number = (call.attrib.get("number") or "").strip()
+        contact_key = normalize_contact(contact)
+        phone_key = normalize_phone(number)
+        target_contact = (
+            contact_key in {normalize_contact(alias) for alias in CALL_CONTACT_ALIASES}
+            or (phone_key and phone_key in {normalize_phone(item) for item in CALL_PHONE_NUMBERS})
+        )
+        if not target_contact:
+            excluded += 1
+            continue
+
         try:
             raw_date = call.attrib.get("date")
             if raw_date is None:
@@ -236,9 +264,7 @@ def read_call_events(path: Path, warnings: list[str]) -> list[dict]:
             warnings.append(f"{path.name} call record {index}: invalid duration {duration_raw!r}.")
             duration = 0
 
-        contact = (call.attrib.get("contact_name") or "").strip()
-        number = (call.attrib.get("number") or "").strip()
-        name = canonical_name(contact) if contact else (number or "Unknown contact")
+        name = "Gargee Basak"
         call_type = CALL_TYPES.get(raw_type, f"Unknown type ({raw_type})")
 
         events.append({
@@ -256,7 +282,7 @@ def read_call_events(path: Path, warnings: list[str]) -> list[dict]:
             "duration_meaningful": raw_type in DURATION_CALL_TYPES,
             "number": number,
         })
-    return events
+    return events, excluded
 
 
 def exact_duplicate_stats(events: list[dict]) -> tuple[int, int]:
@@ -299,9 +325,11 @@ def main() -> int:
         else:
             warnings.append("Missing calls.xml (no XML file found in the script directory).")
 
-    call_events = read_call_events(calls_path, warnings) if calls_path else []
+    call_events, excluded_call_records = (
+        read_call_events(calls_path, warnings) if calls_path else ([], 0)
+    )
     events.extend(call_events)
-    source_counts["Calls"] = len(call_events)
+    source_counts["Calls (Gargee only)"] = len(call_events)
 
     if not events:
         print("REALITY.PY — no valid timestamped records were loaded.")
@@ -394,14 +422,15 @@ def main() -> int:
     for event_type, count in sorted(event_type_counts.items(), key=lambda item: (-item[1], item[0])):
         print(f"  {event_type:<38} {count:>12,}")
     print(f"System events (reported separately)      {len(system_events):>12,}")
-    print(f"Call records                             {len(call_events):>12,}")
-    print(f"All timestamped records                  {len(events):>12,}")
+    print(f"Calls with Gargee                         {len(call_events):>12,}")
+    print(f"Other phone calls excluded                {excluded_call_records:>12,}")
+    print(f"All included timestamped records           {len(events):>12,}")
     print(f"First recorded event                     {display_timestamp(events[0]['timestamp'])}")
     print(f"Last recorded event                      {display_timestamp(events[-1]['timestamp'])}")
     print("\nRecords loaded by source:")
     for source in JSON_FILES:
         print(f"  {source:<38} {source_counts.get(source, 0):>12,}")
-    print(f"  {'Calls':<38} {source_counts.get('Calls', 0):>12,}")
+    print(f"  {'Calls with Gargee':<38} {source_counts.get('Calls (Gargee only)', 0):>12,}")
 
     print("\nPARTICIPANT TEXT STATISTICS")
     print(line)
@@ -469,6 +498,7 @@ def main() -> int:
     print(f"Records with unknown timezone              {naive_count:>12,}")
     print(f"Unknown call type records                  {unknown_call_types:>12,}")
     print(f"Validation warnings                        {len(warnings):>12,}")
+    print(f"Phone-log calls excluded (not matched to Gargee) {excluded_call_records:>8,}")
     print("Source files were read only; no records were deleted or rewritten.")
 
     if warnings:
