@@ -35,6 +35,7 @@ CANONICAL_NAMES = {
     "ankush sarkar": "Ankush Sarkar",
     "gargee": "Gargee Basak",
     "gargee basak": "Gargee Basak",
+    "꧁•༆༆•": "Gargee Basak",
 }
 CALL_CONTACT_ALIASES = {"gargee", "gargee basak", "pendulum"}
 CALL_PHONE_NUMBERS: set[str] = set()
