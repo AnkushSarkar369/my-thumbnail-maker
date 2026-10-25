@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
-"""
-Reality.py — factual statistics from a unified chat and call archive.
+"""Reality.py — factual statistics from Instagram, WhatsApp, and call archives.
 
-Expected input files in the same directory as this script:
-    I_Simple.json
+Expected files beside this script:
+    Instagram.json
     W_Old.json
     W_New.json
     calls.xml
 
-Run:
-    python Reality.py
-
-The source archives are read-only. Records are never deduplicated or rewritten.
-Only Python's standard library is required.
+Uses only Python's standard library. Source archives are read-only.
 """
 
 from __future__ import annotations
@@ -26,11 +21,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-
 BASE_DIR = Path(__file__).resolve().parent
-DISPLAY_TIMEZONE = ZoneInfo("Asia/Kolkata")
+IST = ZoneInfo("Asia/Kolkata")
 JSON_FILES = {
-    "Instagram": BASE_DIR / "I_Simple.json",
+    "Instagram": BASE_DIR / "Instagram.json",
     "WhatsApp (old)": BASE_DIR / "W_Old.json",
     "WhatsApp (new)": BASE_DIR / "W_New.json",
 }
@@ -42,46 +36,33 @@ CANONICAL_NAMES = {
     "gargee": "Gargee Basak",
     "gargee basak": "Gargee Basak",
 }
-
-# Matches common emoji code points. Joined emoji may contain more than one
-# matched code point, so count matched emoji sequences rather than code points.
-EMOJI_PATTERN = re.compile(
-    "["
-    "\U0001F300-\U0001FAFF"
-    "\U00002600-\U000027BF"
-    "\U00002300-\U000023FF"
-    "\U0001F1E6-\U0001F1FF"
-    "\U0000FE0F"
-    "\U0000200D"
-    "\U0001F3FB-\U0001F3FF"
-    "]+",
-    flags=re.UNICODE,
-)
-WORD_PATTERN = re.compile(r"\b[\w]+(?:['’][\w]+)*\b", flags=re.UNICODE)
-
-# Only calls matching Gargee's contact name or an explicitly configured phone
-# number are included. Add any alternate saved contact names here if needed.
 CALL_CONTACT_ALIASES = {"gargee", "gargee basak", "pendulum"}
-# Optional: digits-only phone numbers for Gargee, including country code.
-# Leave empty if the XML reliably provides her contact_name.
 CALL_PHONE_NUMBERS: set[str] = set()
-
 KNOWN_CALL_TYPES = {"1", "2", "3", "4", "5", "6", "7"}
 
+WORD_PATTERN = re.compile(r"\b[\w]+(?:['’][\w]+)*\b", re.UNICODE)
+# Counts clusters approximately rather than counting every code point in a
+# joined emoji sequence as a separate emoji.
+EMOJI_PATTERN = re.compile(
+    r"(?:[\U0001F1E6-\U0001F1FF]{2}"
+    r"|[\U0001F300-\U0001FAFF\u2600-\u27BF\u2300-\u23FF]"
+    r"[\uFE0F\U0001F3FB-\U0001F3FF]*"
+    r"(?:\u200D[\U0001F300-\U0001FAFF\u2600-\u27BF\u2300-\u23FF]"
+    r"[\uFE0F\U0001F3FB-\U0001F3FF]*)*)",
+    re.UNICODE,
+)
 
-def canonical_name(name: object) -> str:
-    value = str(name or "Unknown").strip()
-    return CANONICAL_NAMES.get(value.casefold(), value)
+
+def canonical_name(value: object) -> str:
+    name = str(value or "Unknown").strip()
+    return CANONICAL_NAMES.get(name.casefold(), name)
 
 
 def parse_timestamp(value: object) -> datetime | None:
-    """Parse epoch seconds/milliseconds or ISO-like datetime strings."""
     if value is None or value == "":
         return None
-
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         number = float(value)
-        # Millisecond epoch timestamps are around 13 digits; seconds around 10.
         if abs(number) >= 100_000_000_000:
             number /= 1000
         try:
@@ -92,26 +73,18 @@ def parse_timestamp(value: object) -> datetime | None:
     raw = str(value).strip()
     if not raw:
         return None
-
-    # Numeric epochs may also be stored as strings.
     if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
         try:
             return parse_timestamp(float(raw))
         except ValueError:
             return None
-
     iso = raw[:-1] + "+00:00" if raw.endswith(("Z", "z")) else raw
     try:
         return datetime.fromisoformat(iso)
     except ValueError:
         pass
-
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%d/%m/%Y %H:%M:%S",
-        "%d/%m/%Y %H:%M",
-    ):
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
+                "%d/%m/%Y %H:%M:%S", "%d/%m/%Y %H:%M"):
         try:
             return datetime.strptime(raw, fmt)
         except ValueError:
@@ -119,40 +92,31 @@ def parse_timestamp(value: object) -> datetime | None:
     return None
 
 
-def chronological_key(dt: datetime) -> float:
-    """
-    Use absolute instants for aware timestamps. Naive timestamps have no
-    known timezone; UTC is used only as a deterministic sorting fallback.
-    """
+def sort_time(dt: datetime) -> float:
     if dt.tzinfo is None or dt.utcoffset() is None:
+        # Archives without timezone information cannot be placed with certainty.
+        # Keep the old deterministic fallback for sorting and gap calculations.
         return dt.replace(tzinfo=timezone.utc).timestamp()
     return dt.timestamp()
 
 
-def display_timestamp(dt: datetime) -> str:
+def fmt_time(dt: datetime, include_zone: bool = True) -> str:
     if dt.tzinfo is None or dt.utcoffset() is None:
-        return dt.strftime("%d %b %Y, %H:%M:%S") + " (timezone unknown)"
-    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y, %H:%M:%S IST")
+        suffix = " (timezone unknown)" if include_zone else ""
+        return dt.strftime("%d %b %Y, %H:%M:%S") + suffix
+    rendered = dt.astimezone(IST).strftime("%d %b %Y, %H:%M:%S")
+    return rendered + (" IST" if include_zone else "")
 
 
-def display_timestamp_plain(dt: datetime) -> str:
-    """Format in IST without repeating the zone on compact range lines."""
-    if dt.tzinfo is None or dt.utcoffset() is None:
-        return dt.strftime("%d %b %Y, %H:%M:%S")
-    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y, %H:%M:%S")
-
-
-def display_date(dt: datetime) -> str:
-    if dt.tzinfo is None or dt.utcoffset() is None:
-        return dt.strftime("%d %b %Y")
-    return dt.astimezone(DISPLAY_TIMEZONE).strftime("%d %b %Y")
+def fmt_date(dt: datetime) -> str:
+    return dt.astimezone(IST).strftime("%d %b %Y") if dt.tzinfo else dt.strftime("%d %b %Y")
 
 
 def fmt_duration(seconds: float) -> str:
     total = max(0, int(seconds))
-    days, rem = divmod(total, 86400)
-    hours, rem = divmod(rem, 3600)
-    minutes, secs = divmod(rem, 60)
+    days, rest = divmod(total, 86400)
+    hours, rest = divmod(rest, 3600)
+    minutes, secs = divmod(rest, 60)
     parts = []
     if days:
         parts.append(f"{days}d")
@@ -165,47 +129,85 @@ def fmt_duration(seconds: float) -> str:
     return " ".join(parts)
 
 
-def read_json_events(path: Path, source: str, warnings: list[str]) -> list[dict]:
+def get_record_timestamp(record: dict) -> datetime | None:
+    # Prefer the numeric source timestamp where available; Instagram.json keeps
+    # timestamp_ms, and its timestamp_ist field is a readable companion.
+    for key in ("timestamp_ms", "timestamp", "timestamp_ist", "date", "datetime", "created_at"):
+        if key in record:
+            parsed = parse_timestamp(record[key])
+            if parsed is not None:
+                return parsed
+    return None
+
+
+def infer_event_type(record: dict, message: str, source: str) -> str:
+    explicit = record.get("type") or record.get("event_type") or record.get("message_type")
+    if explicit:
+        return str(explicit).strip().casefold() or "unknown"
+    if message.strip():
+        return "text"
+    # Instagram export metadata for records without text.
+    for key, label in (
+        ("reactions", "reaction"), ("share", "share"),
+        ("photos", "photo"), ("videos", "video"),
+        ("audio_files", "audio"), ("files", "file"),
+        ("call_duration", "call"),
+    ):
+        value = record.get(key)
+        if value not in (None, "", [], {}):
+            return label
+    return "unknown"
+
+
+def read_json_events(path: Path, source: str, diagnostics: Counter) -> list[dict]:
     events = []
     try:
-        with path.open("r", encoding="utf-8") as handle:
+        with path.open("r", encoding="utf-8-sig") as handle:
             data = json.load(handle)
     except FileNotFoundError:
-        warnings.append(f"Missing input file: {path.name}")
+        diagnostics[f"{source}: missing file"] += 1
         return events
-    except (OSError, json.JSONDecodeError) as exc:
-        warnings.append(f"Could not read {path.name}: {exc}")
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        diagnostics[f"{source}: unreadable file"] += 1
+        print(f"Reality.py: could not read {path.name}: {exc}", file=sys.stderr)
         return events
 
     if isinstance(data, dict):
         data = data.get("messages", data.get("events", []))
     if not isinstance(data, list):
-        warnings.append(f"{path.name}: expected a list of records (or a messages/events list).")
+        diagnostics[f"{source}: invalid root structure"] += 1
+        print(f"Reality.py: {path.name} must contain a list or a messages list.", file=sys.stderr)
         return events
 
     for index, record in enumerate(data, start=1):
         if not isinstance(record, dict):
-            warnings.append(f"{path.name} record {index}: record is not an object.")
+            diagnostics[f"{source}: non-object records"] += 1
             continue
 
-        timestamp = parse_timestamp(record.get("timestamp"))
+        timestamp = get_record_timestamp(record)
         if timestamp is None:
-            warnings.append(f"{path.name} record {index}: missing or invalid timestamp.")
+            diagnostics[f"{source}: invalid timestamps"] += 1
             continue
 
-        sender_raw = record.get("sender", "Unknown")
+        # Instagram.json uses sender_name/content; older WhatsApp archives may
+        # use sender/message. Support both without changing either archive.
+        sender_raw = (
+            record.get("sender_name") or record.get("sender")
+            or record.get("author") or record.get("from") or "Unknown"
+        )
         sender = canonical_name(sender_raw)
-        event_type = str(record.get("type") or "unknown").strip() or "unknown"
-        message_value = record.get("message", "")
+        message_value = record.get("content")
+        if message_value is None:
+            message_value = record.get("message", record.get("text", ""))
         message = message_value if isinstance(message_value, str) else str(message_value or "")
-        is_system = str(sender_raw or "").strip().casefold() in {
-            "system", "whatsapp", "instagram", "meta"
-        } or sender.casefold() == "system"
+        event_type = infer_event_type(record, message, source)
+        sender_key = str(sender_raw).strip().casefold()
+        is_system = sender_key in {"system", "whatsapp", "instagram", "meta"} or sender.casefold() == "system"
 
         events.append({
             "timestamp": timestamp,
             "sender": sender,
-            "sender_raw": str(sender_raw or "Unknown").strip(),
+            "sender_raw": str(sender_raw).strip(),
             "type": event_type,
             "message": message,
             "source": source,
@@ -224,57 +226,49 @@ def normalize_contact(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", (value or "").casefold())
 
 
-def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
+def read_call_events(path: Path, diagnostics: Counter) -> list[dict]:
     events = []
-    excluded = 0
     try:
         root = ET.parse(path).getroot()
     except FileNotFoundError:
-        warnings.append(f"Missing input file: {path.name}")
-        return events, excluded
+        diagnostics["Calls: missing file"] += 1
+        return events
     except (ET.ParseError, OSError) as exc:
-        warnings.append(f"Could not read {path.name}: {exc}")
-        return events, excluded
+        diagnostics["Calls: unreadable file"] += 1
+        print(f"Reality.py: could not read {path.name}: {exc}", file=sys.stderr)
+        return events
 
+    aliases = {normalize_contact(name) for name in CALL_CONTACT_ALIASES}
+    numbers = {normalize_phone(number) for number in CALL_PHONE_NUMBERS}
     for index, call in enumerate(root.findall("call"), start=1):
         contact = (call.attrib.get("contact_name") or "").strip()
         number = (call.attrib.get("number") or "").strip()
-        contact_key = normalize_contact(contact)
-        phone_key = normalize_phone(number)
-        target_contact = (
-            contact_key in {normalize_contact(alias) for alias in CALL_CONTACT_ALIASES}
-            or (phone_key and phone_key in {normalize_phone(item) for item in CALL_PHONE_NUMBERS})
-        )
-        if not target_contact:
-            excluded += 1
+        if normalize_contact(contact) not in aliases and normalize_phone(number) not in numbers:
             continue
 
         try:
             raw_date = call.attrib.get("date")
             if raw_date is None:
-                raise ValueError("missing date")
-            timestamp = parse_timestamp(int(raw_date) / 1000)
+                raise ValueError
+            timestamp = parse_timestamp(int(raw_date))
             if timestamp is None:
-                raise ValueError("invalid date")
+                raise ValueError
         except (ValueError, TypeError, OverflowError):
-            warnings.append(f"{path.name} call record {index}: missing or invalid date.")
+            diagnostics["Calls: invalid timestamps"] += 1
             continue
 
-        raw_type = str(call.attrib.get("type", "unknown"))
-        duration_raw = call.attrib.get("duration", "0")
         try:
-            duration = max(0, int(duration_raw))
+            duration = max(0, int(call.attrib.get("duration", "0")))
         except (ValueError, TypeError):
-            warnings.append(f"{path.name} call record {index}: invalid duration {duration_raw!r}.")
+            diagnostics["Calls: invalid durations"] += 1
             duration = 0
 
-        name = "Gargee Basak"
+        raw_type = str(call.attrib.get("type", "unknown"))
         if raw_type not in KNOWN_CALL_TYPES:
-            warnings.append(f"{path.name} call record {index}: unknown call type code {raw_type!r}.")
-
+            diagnostics["Calls: unknown type codes"] += 1
         events.append({
             "timestamp": timestamp,
-            "sender": name,
+            "sender": "Gargee Basak",
             "sender_raw": contact or number or "Unknown contact",
             "type": "call",
             "message": "",
@@ -285,248 +279,169 @@ def read_call_events(path: Path, warnings: list[str]) -> tuple[list[dict], int]:
             "duration": duration,
             "number": number,
         })
-    return events, excluded
+    return events
 
 
-def exact_duplicate_stats(events: list[dict]) -> tuple[int, int]:
-    """Return (number of duplicate groups, extra occurrences) across JSON records."""
+def duplicate_stats(events: list[dict]) -> tuple[int, int]:
     counts = Counter()
     for event in events:
         if event["source"] == "Calls":
             continue
-        raw = event["raw_record"]
-        # All normalized fields are considered, including any additional fields.
-        fingerprint = json.dumps(raw, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+        fingerprint = json.dumps(
+            event["raw_record"], sort_keys=True, ensure_ascii=False, separators=(",", ":")
+        )
         counts[fingerprint] += 1
-    groups = sum(1 for count in counts.values() if count > 1)
-    extras = sum(count - 1 for count in counts.values() if count > 1)
-    return groups, extras
+    return (
+        sum(count > 1 for count in counts.values()),
+        sum(count - 1 for count in counts.values() if count > 1),
+    )
 
 
 def main() -> int:
-    warnings: list[str] = []
-    events: list[dict] = []
-    json_events: list[dict] = []
-
+    diagnostics = Counter()
+    chat_events = []
     for source, path in JSON_FILES.items():
-        loaded = read_json_events(path, source, warnings)
-        events.extend(loaded)
-        json_events.extend(loaded)
+        chat_events.extend(read_json_events(path, source, diagnostics))
 
-    calls_path = CALLS_FILE if CALLS_FILE.exists() else None
-    if calls_path is None:
-        xml_candidates = sorted(BASE_DIR.glob("*.xml"))
-        if len(xml_candidates) == 1:
-            calls_path = xml_candidates[0]
-        elif len(xml_candidates) > 1:
-            warnings.append(
-                "calls.xml was not found and multiple XML files exist; "
-                "rename the consolidated call archive to calls.xml."
-            )
-        else:
-            warnings.append("Missing calls.xml (no XML file found in the script directory).")
-
-    call_events, excluded_call_records = (
-        read_call_events(calls_path, warnings) if calls_path else ([], 0)
-    )
-    events.extend(call_events)
-
+    call_events = read_call_events(CALLS_FILE, diagnostics)
+    events = chat_events + call_events
     if not events:
-        print("REALITY.PY — no valid timestamped records were loaded.")
-        print("\nCheck that I_Simple.json, W_Old.json, W_New.json, and calls.xml are")
-        print("in the same directory as Reality.py.")
-        for warning in warnings:
-            print(f"Reality.py: {warning}", file=sys.stderr)
+        print("REALITY — no valid timestamped records were loaded.")
+        print("Expected Instagram.json, W_Old.json, W_New.json, and calls.xml beside Reality.py.")
+        for key, count in sorted(diagnostics.items()):
+            print(f"Reality.py: {key}: {count}", file=sys.stderr)
         return 1
 
-    events.sort(key=lambda event: chronological_key(event["timestamp"]))
-
+    events.sort(key=lambda event: sort_time(event["timestamp"]))
     text_events = [
-        event for event in json_events
-        if event["type"].casefold() == "text"
-        and not event["is_system"]
-        and event["message"].strip()
+        event for event in chat_events
+        if event["type"] == "text" and not event["is_system"] and event["message"].strip()
     ]
-    system_events = [event for event in json_events if event["is_system"]]
+    system_events = [event for event in chat_events if event["is_system"]]
     empty_text_entries = [
-        event for event in json_events
-        if event["type"].casefold() == "text"
-        and not event["is_system"]
-        and not event["message"].strip()
+        event for event in chat_events
+        if event["type"] == "text" and not event["is_system"] and not event["message"].strip()
     ]
     other_events = [
-        event for event in json_events
-        if event["type"].casefold() != "text" and not event["is_system"]
+        event for event in chat_events
+        if event["type"] != "text" and not event["is_system"]
     ]
 
-    participants = sorted({event["sender"] for event in text_events})
-    participant_stats = {
-        participant: {
-            "messages": 0,
-            "words": 0,
-            "characters": 0,
-            "emojis": 0,
-            "by_source": Counter(),
-        }
-        for participant in participants
-    }
-
+    participant_stats = {}
     for event in text_events:
-        stats = participant_stats[event["sender"]]
-        message = event["message"]
+        stats = participant_stats.setdefault(event["sender"], {
+            "messages": 0, "words": 0, "characters": 0, "emojis": 0, "by_source": Counter()
+        })
         stats["messages"] += 1
-        stats["words"] += len(WORD_PATTERN.findall(message))
-        stats["characters"] += len(message)
-        stats["emojis"] += len(EMOJI_PATTERN.findall(message))
+        stats["words"] += len(WORD_PATTERN.findall(event["message"]))
+        stats["characters"] += len(event["message"])
+        stats["emojis"] += len(EMOJI_PATTERN.findall(event["message"]))
         stats["by_source"][event["source"]] += 1
 
     event_type_counts = Counter(event["type"] for event in other_events)
-    duplicate_groups, duplicate_extras = exact_duplicate_stats(json_events)
-
-    total_recorded_duration = sum(event["duration"] for event in call_events)
+    duplicate_groups, duplicate_extras = duplicate_stats(chat_events)
+    total_call_duration = sum(event["duration"] for event in call_events)
     longest_call = max(call_events, key=lambda event: event["duration"], default=None)
-    first_call = min(call_events, key=lambda event: chronological_key(event["timestamp"]), default=None)
-    last_call = max(call_events, key=lambda event: chronological_key(event["timestamp"]), default=None)
+    first_call = min(call_events, key=lambda event: sort_time(event["timestamp"]), default=None)
+    last_call = max(call_events, key=lambda event: sort_time(event["timestamp"]), default=None)
 
-    # The chronology combines timestamped events from all three chat archives
-    # and the call log. Gaps are between adjacent recorded events, not claims
-    # that no communication occurred elsewhere.
     gaps = []
     for previous, following in zip(events, events[1:]):
-        seconds = chronological_key(following["timestamp"]) - chronological_key(previous["timestamp"])
+        seconds = sort_time(following["timestamp"]) - sort_time(previous["timestamp"])
         if seconds >= 0:
             gaps.append((seconds, previous, following))
     top_gaps = sorted(gaps, key=lambda item: item[0], reverse=True)[:5]
 
-    sep = "═" * 70
-    line = "─" * 70
-    first_event = events[0]
-    last_event = events[-1]
-
-    print(sep)
+    separator = "═" * 70
+    rule = "─" * 70
+    first_event, last_event = events[0], events[-1]
+    print(separator)
     print("                              REALITY")
     print("                    Unified Conversation Archive")
-    print(
-        f"        {display_date(first_event['timestamp'])} — "
-        f"{display_date(last_event['timestamp'])} · All times IST"
-    )
-    print(sep)
+    print(f"        {fmt_date(first_event['timestamp'])} — {fmt_date(last_event['timestamp'])} · All times IST")
+    print(separator)
 
     print("\nOVERVIEW")
-    print(line)
+    print(rule)
     print(f"{'Text messages':<42}{len(text_events):>12,}")
     for participant in sorted(participant_stats):
-        print(
-            f"  {participant:<40}"
-            f"{participant_stats[participant]['messages']:>12,}"
-        )
+        print(f"  {participant:<40}{participant_stats[participant]['messages']:>12,}")
     print(f"{'Other chat events':<42}{len(other_events):>12,}")
     print(f"{'Empty text entries':<42}{len(empty_text_entries):>12,}")
     print(f"{'System events':<42}{len(system_events):>12,}")
     print(f"{'Calls with Gargee':<42}{len(call_events):>12,}")
-    print(line)
+    print(rule)
     print(f"{'Total recorded events':<42}{len(events):>12,}")
-    print()
-    print(f"{'First recorded event':<30}{display_timestamp(first_event['timestamp'])}")
-    print(f"{'Last recorded event':<30}{display_timestamp(last_event['timestamp'])}")
+    print(f"\n{'First recorded event':<30}{fmt_time(first_event['timestamp'])}")
+    print(f"{'Last recorded event':<30}{fmt_time(last_event['timestamp'])}")
 
     print("\nMESSAGE STATISTICS")
-    print(line)
-    participant_header = (
-        f"{'Participant':<22} {'Messages':>10} {'Words':>12} "
-        f"{'Characters':>13} {'Emojis':>9}"
-    )
-    print(participant_header)
-    print("─" * len(participant_header))
-    totals = {"messages": 0, "words": 0, "characters": 0, "emojis": 0}
+    print(rule)
+    header = f"{'Participant':<22} {'Messages':>10} {'Words':>12} {'Characters':>13} {'Emojis':>9}"
+    print(header)
+    print("─" * len(header))
+    totals = Counter()
     for participant in sorted(participant_stats):
         stats = participant_stats[participant]
-        print(
-            f"{participant[:22]:<22} {stats['messages']:>10,} "
-            f"{stats['words']:>12,} {stats['characters']:>13,} "
-            f"{stats['emojis']:>9,}"
-        )
-        for key in totals:
+        print(f"{participant[:22]:<22} {stats['messages']:>10,} {stats['words']:>12,} {stats['characters']:>13,} {stats['emojis']:>9,}")
+        for key in ("messages", "words", "characters", "emojis"):
             totals[key] += stats[key]
-    print("─" * len(participant_header))
-    print(
-        f"{'TOTAL':<22} {totals['messages']:>10,} "
-        f"{totals['words']:>12,} {totals['characters']:>13,} "
-        f"{totals['emojis']:>9,}"
-    )
+    print("─" * len(header))
+    print(f"{'TOTAL':<22} {totals['messages']:>10,} {totals['words']:>12,} {totals['characters']:>13,} {totals['emojis']:>9,}")
 
     print("\nMESSAGES BY PLATFORM")
-    print(line)
-    platform_header = (
-        f"{'Participant':<22} {'Instagram':>12} {'WhatsApp Old':>15} "
-        f"{'WhatsApp New':>15} {'Total':>10}"
-    )
-    print(platform_header)
-    print("─" * len(platform_header))
-    platform_totals = {source: 0 for source in JSON_FILES}
+    print(rule)
+    header = f"{'Participant':<22} {'Instagram':>12} {'WhatsApp Old':>15} {'WhatsApp New':>15} {'Total':>10}"
+    print(header)
+    print("─" * len(header))
+    platform_totals = Counter()
     for participant in sorted(participant_stats):
-        by_source = participant_stats[participant]["by_source"]
-        counts = [by_source[source] for source in JSON_FILES]
-        for source, count in zip(JSON_FILES, counts):
-            platform_totals[source] += count
-        print(
-            f"{participant[:22]:<22} {counts[0]:>12,} {counts[1]:>15,} "
-            f"{counts[2]:>15,} {sum(counts):>10,}"
-        )
-    print("─" * len(platform_header))
-    print(
-        f"{'TOTAL':<22} {platform_totals['Instagram']:>12,} "
-        f"{platform_totals['WhatsApp (old)']:>15,} "
-        f"{platform_totals['WhatsApp (new)']:>15,} "
-        f"{sum(platform_totals.values()):>10,}"
-    )
+        counts = [participant_stats[participant]["by_source"][name] for name in JSON_FILES]
+        for name, count in zip(JSON_FILES, counts):
+            platform_totals[name] += count
+        print(f"{participant[:22]:<22} {counts[0]:>12,} {counts[1]:>15,} {counts[2]:>15,} {sum(counts):>10,}")
+    print("─" * len(header))
+    print(f"{'TOTAL':<22} {platform_totals['Instagram']:>12,} {platform_totals['WhatsApp (old)']:>15,} {platform_totals['WhatsApp (new)']:>15,} {sum(platform_totals.values()):>10,}")
 
     print("\nOTHER CHAT EVENTS")
-    print(line)
-    event_header = f"{'Event type':<44}{'Count':>12}"
-    print(event_header)
-    print("─" * len(event_header))
+    print(rule)
+    header = f"{'Event type':<44}{'Count':>12}"
+    print(header)
+    print("─" * len(header))
     for event_type, count in sorted(event_type_counts.items(), key=lambda item: (-item[1], item[0])):
         print(f"{event_type:<44}{count:>12,}")
-    print("─" * len(event_header))
+    print("─" * len(header))
     print(f"{'TOTAL':<44}{len(other_events):>12,}")
 
     print("\nCALLS")
-    print(line)
+    print(rule)
     print(f"{'Total calls':<42}{len(call_events):>12,}")
-    print(f"{'Total call duration':<42}{fmt_duration(total_recorded_duration):>12}")
+    print(f"{'Total call duration':<42}{fmt_duration(total_call_duration):>12}")
     if longest_call:
         print(f"{'Longest call':<42}{fmt_duration(longest_call['duration']):>12}")
-        print(f"{'Date of longest call':<30}{display_timestamp(longest_call['timestamp'])}")
+        print(f"{'Date of longest call':<30}{fmt_time(longest_call['timestamp'])}")
     if first_call and last_call:
-        first_call_date = display_date(first_call["timestamp"])
-        last_call_date = display_date(last_call["timestamp"])
-        print(f"{'Recorded call date range':<30}{first_call_date} — {last_call_date}")
+        print(f"{'Recorded call date range':<30}{fmt_date(first_call['timestamp'])} — {fmt_date(last_call['timestamp'])}")
 
     print("\nLONGEST GAPS BETWEEN RECORDED EVENTS")
-    print(line)
+    print(rule)
     if not top_gaps:
         print("Not enough timestamped events to calculate gaps.")
     else:
         for rank, (seconds, previous, following) in enumerate(top_gaps, start=1):
-            start = display_timestamp_plain(previous["timestamp"])
-            end = display_timestamp_plain(following["timestamp"])
-            print(f"{rank}. {fmt_duration(seconds):<17} [{start} — {end} IST]")
+            print(f"{rank}. {fmt_duration(seconds):<17} [{fmt_time(previous['timestamp'], False)} — {fmt_time(following['timestamp'], False)} IST]")
 
     print("\nARCHIVE INTEGRITY")
-    print(line)
+    print(rule)
     print(f"{'Exact duplicate groups':<42}{duplicate_groups:>12,}")
     print(f"{'Extra occurrences in duplicate groups':<42}{duplicate_extras:>12,}")
-    print()
-    print("Original archive files remain unchanged.")
+    print("\nOriginal archive files remain unchanged.")
+    print(separator)
 
-    print(sep)
-    if warnings:
+    if diagnostics:
         print("\nReality.py validation notes (stderr; not part of the report):", file=sys.stderr)
-        for warning in warnings[:50]:
-            print(f"- {warning}", file=sys.stderr)
-        if len(warnings) > 50:
-            print(f"- ... and {len(warnings) - 50:,} more note(s).", file=sys.stderr)
+        for key, count in sorted(diagnostics.items()):
+            print(f"- {key}: {count}", file=sys.stderr)
     return 0
 
 
